@@ -152,7 +152,7 @@ public class LongLat {
 
         if(lngStart >= lngEnd && latStart <= latEnd){
 
-                return 180 - angle;
+            return 180 - angle;
         }
 
         if(lngStart >= lngEnd && latStart >= latEnd){
@@ -162,7 +162,7 @@ public class LongLat {
 
         if(lngStart <= lngEnd && latStart >= latEnd){
 
-                return (360 - angle) % 360;
+            return (360 - angle) % 360;
         }
 
         return bestAngle;
@@ -184,7 +184,10 @@ public class LongLat {
                 }
             }
 
+        }
 
+        if (closest.lng == 999){
+            closest = landmarkLongLats.get(1);
         }
         return closest; //maybe move this method to buildings?
     }

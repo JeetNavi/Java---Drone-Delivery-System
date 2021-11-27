@@ -66,6 +66,7 @@ public class App {
         //int bestAngle;
 
         List<Point> path = new ArrayList<>();
+        path.add(Point.fromLngLat(appleton.longitude(), appleton.latitude()));
 
         //List<Point> landmarkPoints = new ArrayList<>();
         landmarkPoints.add(appleton);
@@ -75,42 +76,42 @@ public class App {
         LongLat dest = kfc;
 
         /**
-        while (!drone.position.closeTo(dest)){
+         while (!drone.position.closeTo(dest)){
 
-            LongLat currentPosition = drone.position;
+         LongLat currentPosition = drone.position;
 
-            if (!buildings.checkDirectRoute(currentPosition, dest)){
-                LongLat closestLandmark = new LongLat(999,999);
-                double closestLandmarkDistance = 999;
-                for (Point landmarkPoint : landmarkPoints){
-                    LongLat landmarkLongLat = new LongLat(landmarkPoint.longitude(), landmarkPoint.latitude());
-                    if (buildings.checkDirectRoute(currentPosition, landmarkLongLat)
-                    && dest.distanceTo(landmarkLongLat) < closestLandmarkDistance){
-                        closestLandmark = landmarkLongLat;
-                        closestLandmarkDistance = dest.distanceTo(landmarkLongLat);
-                    }
-                }
-                while (!drone.position.closeTo(closestLandmark)){
-                    currentPosition = drone.position;
-                    bestAngle = currentPosition.bestAngle(closestLandmark);
-                    pl.add(Point.fromLngLat(drone.position.lng, drone.position.lat));
-                    drone.fly(bestAngle);
-                    drone.battery -= 1;
-                }
-            }
-            else{
-                bestAngle = currentPosition.bestAngle(kfc);
-                pl.add(Point.fromLngLat(drone.position.lng, drone.position.lat));
-                drone.fly(bestAngle);
-                drone.battery -= 1;
-            }
-        }
+         if (!buildings.checkDirectRoute(currentPosition, dest)){
+         LongLat closestLandmark = new LongLat(999,999);
+         double closestLandmarkDistance = 999;
+         for (Point landmarkPoint : landmarkPoints){
+         LongLat landmarkLongLat = new LongLat(landmarkPoint.longitude(), landmarkPoint.latitude());
+         if (buildings.checkDirectRoute(currentPosition, landmarkLongLat)
+         && dest.distanceTo(landmarkLongLat) < closestLandmarkDistance){
+         closestLandmark = landmarkLongLat;
+         closestLandmarkDistance = dest.distanceTo(landmarkLongLat);
+         }
+         }
+         while (!drone.position.closeTo(closestLandmark)){
+         currentPosition = drone.position;
+         bestAngle = currentPosition.bestAngle(closestLandmark);
+         pl.add(Point.fromLngLat(drone.position.lng, drone.position.lat));
+         drone.fly(bestAngle);
+         drone.battery -= 1;
+         }
+         }
+         else{
+         bestAngle = currentPosition.bestAngle(kfc);
+         pl.add(Point.fromLngLat(drone.position.lng, drone.position.lat));
+         drone.fly(bestAngle);
+         drone.battery -= 1;
+         }
+         }
 
          **/
-
         //path = drone.algorithm(landmarkPoints, dest, buildings, path);
         //Map<String, LongLat> shopsToLongLat = menu.getShopsToLongLat();
 
+        topLoop:
         for (String orderNo : orderNoList){
             Collection<String> itemNames = order.getItemNamesFromOrder(orderNo);
             String[] shopsToVisit = menu.shopsArrayFromItems(itemNames);
@@ -120,15 +121,22 @@ public class App {
             for (String shop : tspShopsToVisit){
                 LongLat destination = shopsToLongLat.get(shop);
                 path = drone.algorithm(landmarkPoints, destination, buildings, path);
+                if (drone.outOfMovess){
+                    break topLoop;
+                }
             }
             path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path);
+            System.out.println(drone.moves);
+            System.out.println(drone.battery);
+
         }
-        dest = new LongLat(LongLat.APPLETON_LONGITUDE, LongLat.APPLETON_LATITUDE);
-        path = drone.algorithm(landmarkPoints, dest, buildings, path);
+        path = drone.algorithmEnd(landmarkPoints, buildings, path);
 
 
-        System.out.println(drone.battery);
-
+        //System.out.println(drone.battery);
+        //System.out.println(drone.position.lng);
+        //System.out.println(drone.position.lat);
+        //System.out.println(drone.moves);
 
 
         //CREATING THE GEOJSON FILE
@@ -161,4 +169,3 @@ public class App {
         }
     }
 }
-

@@ -82,15 +82,15 @@ public class Buildings {
         }
 
         /**
-        for (List<List<Point>> p : pointObjects){
-            for (List<Point> p2 : p){
-                for (Point p3 : p2){
-                    System.out.println(p3.latitude());
-                    System.out.println(p3.longitude());
-                }
-            }
-        }
-**/
+         for (List<List<Point>> p : pointObjects){
+         for (List<Point> p2 : p){
+         for (Point p3 : p2){
+         System.out.println(p3.latitude());
+         System.out.println(p3.longitude());
+         }
+         }
+         }
+         **/
 
 
 
@@ -181,6 +181,8 @@ public class Buildings {
 
     }
 
+
 }
+
 
 

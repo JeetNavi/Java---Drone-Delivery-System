@@ -12,6 +12,8 @@ public class Drone {
     public LongLat position = appletonTower;
     public int battery = 1500;
     public int moves = 0;
+    public boolean outOfMovess = false;
+
 
     public void fly(int angle){
         position = position.nextPosition(angle);
@@ -27,44 +29,75 @@ public class Drone {
 
         int bestAngle;
 
+        topLoop:
         while (!position.closeTo(destination)){
 
-            if (!buildings.checkDirectRoute(position, destination)){
-                //LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
-                LongLat closestLandmark = new LongLat(999,999);
-                double closestLandmarkDistance = 999;
-                for (Point landmarkPoint : landmarkPoints){
-                    LongLat landmarkLongLat = new LongLat(landmarkPoint.longitude(), landmarkPoint.latitude());
-                    if (buildings.checkDirectRoute(position, landmarkLongLat)
-                            && destination.distanceTo(landmarkLongLat) < closestLandmarkDistance){
-                        closestLandmark = landmarkLongLat;
-                        closestLandmarkDistance = destination.distanceTo(landmarkLongLat);
-                    }
-                }
+
+            if (!buildings.checkDirectRoute(position, destination)) {
+                LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
                 while (!position.closeTo(closestLandmark)){
-                    bestAngle = position.bestAngle(closestLandmark);
-                    bestAngle = position.angleToDodgePotentialNfz(buildings, position, bestAngle, closestLandmark);
+                    bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(closestLandmark), closestLandmark);
+                    fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
-                    this.fly(bestAngle);
+                    outOfMovess = outOfMoves(landmarkPoints, buildings);
+                    if (outOfMovess){
+                        break topLoop;
+                    }
                 }
             }
             else{
-                bestAngle = position.bestAngle(destination);
-
-                bestAngle = position.angleToDodgePotentialNfz(buildings, position, bestAngle, destination);
-
+                bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(destination), destination);
+                fly(bestAngle);
                 path.add(Point.fromLngLat(position.lng, position.lat));
-                this.fly(bestAngle);
+                outOfMovess = outOfMoves(landmarkPoints, buildings);
+                if (outOfMovess){
+                    break topLoop;
+                }
             }
         }
-        this.hover();
-        path.add(Point.fromLngLat(position.lng, position.lat));
-        path.add(Point.fromLngLat(position.lng, position.lat)); //cuz of how we add to path
+        if (!outOfMovess) {
+            this.hover();
+            path.add(Point.fromLngLat(position.lng, position.lat));
+        }
+        return path;
+    }
+
+    public List<Point> algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path){
+
+        int bestAngle;
+
+        while (!position.closeTo(appletonTower)){
+
+            if (!buildings.checkDirectRoute(position, appletonTower)) {
+                LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, appletonTower, buildings);
+                while (!position.closeTo(closestLandmark)){
+                    bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(closestLandmark), closestLandmark);
+                    fly(bestAngle);
+                    path.add(Point.fromLngLat(position.lng, position.lat));
+                }
+            }
+            else{
+                bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(appletonTower), appletonTower);
+                fly(bestAngle);
+                path.add(Point.fromLngLat(position.lng, position.lat));
+            }
+        }
 
         return path;
     }
 
+    public boolean outOfMoves(List<Point> landmarkPoints, Buildings buildings){
 
+        Drone dummyDrone = new Drone();
+        dummyDrone.position = position;
+        dummyDrone.moves = 0;
 
+        List<Point> dummyList = new ArrayList<>();
+
+        dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList);
+
+        return (battery - dummyDrone.moves == 0);
+
+    }
 
 }
