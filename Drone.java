@@ -39,6 +39,9 @@ public class Drone {
                     bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(closestLandmark), closestLandmark);
                     fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
+                    if (battery == 100){
+                        int i = 5;
+                    }
                     outOfMovess = outOfMoves(landmarkPoints, buildings);
                     if (outOfMovess){
                         break topLoop;
@@ -53,11 +56,18 @@ public class Drone {
                 if (outOfMovess){
                     break topLoop;
                 }
+                if (battery == 100){
+                    int i = 5;
+                }
             }
         }
         if (!outOfMovess) {
             this.hover();
             path.add(Point.fromLngLat(position.lng, position.lat));
+            outOfMovess = outOfMoves(landmarkPoints, buildings);
+            if (battery == 100){
+                int i = 5;
+            }
         }
         return path;
     }
@@ -96,7 +106,7 @@ public class Drone {
 
         dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList);
 
-        return (battery - dummyDrone.moves == 0);
+        return (battery - dummyDrone.moves < 5);
 
     }
 
