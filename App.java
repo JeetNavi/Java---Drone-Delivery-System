@@ -132,6 +132,9 @@ public class App {
         }
         path = drone.algorithmEnd(landmarkPoints, buildings, path);
 
+        System.out.println(drone.moves);
+        System.out.println(drone.battery);
+
 
         //System.out.println(drone.battery);
         //System.out.println(drone.position.lng);
