@@ -12,11 +12,11 @@ public class Words {
     private static LongLat coordinates;
 
     Words(String webPort, String[] threeWords) {
-            this.webPort = webPort;
+        this.webPort = webPort;
 
-            String wordOne = threeWords[0];
-            String wordTwo = threeWords[1];
-            String wordThree = threeWords[2];
+        String wordOne = threeWords[0];
+        String wordTwo = threeWords[1];
+        String wordThree = threeWords[2];
 
         try {
 
@@ -26,7 +26,7 @@ public class Words {
             HttpResponse<String> response = Menus.client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if(response.statusCode() == Menus.SUCCESSFUL_RESPONSE_CODE){
-                coordinates = new Gson().fromJson(response.body(), w3wDetails.class).coordinates;
+                coordinates = new Gson().fromJson(response.body(), W3wDetails.class).coordinates;
             }
             else {
                 System.err.println("Status code is not 200.");
@@ -35,19 +35,19 @@ public class Words {
 
         } catch (IllegalArgumentException e){
 
-            System.out.println("IllegalArgumentException - URL syntactically incorrect");
+            System.err.println("IllegalArgumentException - URL syntactically incorrect");
             e.printStackTrace();
             System.exit(1);
 
         } catch (java.net.ConnectException e){
 
-            System.out.println("Fatal error: unable to connect to localhost at port " + webPort + ".");
+            System.err.println("Fatal error: unable to connect to localhost at port " + webPort + ".");
             e.printStackTrace();
             System.exit(1);
 
         } catch (Exception e){
 
-            System.out.println("An exception has occurred");
+            System.err.println("An exception has occurred");
             e.printStackTrace();
         }
     }

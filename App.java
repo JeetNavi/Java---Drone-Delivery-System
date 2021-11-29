@@ -1,27 +1,23 @@
 package uk.ac.ed.inf;
 
-import com.google.gson.Gson;
 import com.mapbox.geojson.*;
-import org.apache.commons.collections4.MultiValuedMap;
-import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 
-import java.awt.geom.Line2D;
 import java.io.File;
 import java.io.FileWriter;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.sql.*;
 import java.sql.Date;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Hello world!
  *
  */
-public class App {
-    public static void main(String[] args) {
+public class App 
+{
+    public static void main( String[] args )
+    {
 
         final double APPLETON_LONGITUDE = -3.186874;
         final double APPLETON_LATITUDE = 55.944494;
@@ -125,12 +121,12 @@ public class App {
             String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.getPosition(), shopsToVisit, deliverToLongLat, landmarkPoints, buildings, orders, orderNo);
             for (String shop : tspShopsToVisit){
                 LongLat destination = shopsToLongLat.get(shop);
-                path = drone.algorithm(landmarkPoints, destination, buildings, path, orders, orderNo);
+                path = drone.algorithm(landmarkPoints, destination, buildings, path);
                 if (drone.getOutOfMoves()){
                     break topLoop;
                 }
             }
-            path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path, orders, orderNo);
+            path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path);
             int costInPenceOfOrder = ordersSortedByValue.get(orderNo);
             monetaryValue += costInPenceOfOrder;
             Orders.insertIntoDeliveries(orderNo, costInPenceOfOrder);
@@ -164,7 +160,7 @@ public class App {
         drone.setAnglesOfMoves(new ArrayList<Integer>());
 
 
-        path = drone.algorithmEnd(landmarkPoints, buildings, path, orders, null);
+        path = drone.algorithmEnd(landmarkPoints, buildings, path);
 
         counter = 0;
         for (LongLat moveFrom : drone.getMovesFrom()){

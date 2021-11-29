@@ -35,10 +35,10 @@ public class Drone {
         battery -= 1;
         moves += 1;
         movesTo.add(position);
-        anglesOfMoves.add(LongLat.HOVER);
+        anglesOfMoves.add(LongLat.JUNK_VALUE);
     }
 
-    public List<Point> algorithm (List<Point> landmarkPoints, LongLat destination, Buildings buildings, List<Point> path, Orders orders, String orderNo){
+    public List<Point> algorithm (List<Point> landmarkPoints, LongLat destination, Buildings buildings, List<Point> path){
 
         int bestAngle;
 
@@ -50,15 +50,10 @@ public class Drone {
                 LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
                 while (!position.closeTo(closestLandmark)){
                     bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
-
-                    //LongLat previousPosition = new LongLat(position.lng, position.lat);
-
                     fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
 
-                    //orders.insertIntoFlightpath(orderNo, previousPosition.lng, previousPosition.lat, bestAngle, position.lng, position.lat);
-
-                    outOfMoves = outOfMoves(landmarkPoints, buildings, orders, orderNo);
+                    outOfMoves = outOfMoves(landmarkPoints, buildings);
                     if (outOfMoves){
                         break topLoop;
                     }
@@ -66,15 +61,10 @@ public class Drone {
             }
             else{
                 bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(destination), destination);
-
-                //LongLat previousPosition = new LongLat(position.lng, position.lat);
-
                 fly(bestAngle);
                 path.add(Point.fromLngLat(position.lng, position.lat));
 
-                //orders.insertIntoFlightpath(orderNo, previousPosition.lng, previousPosition.lat, bestAngle, position.lng, position.lat);
-
-                outOfMoves = outOfMoves(landmarkPoints, buildings, orders, orderNo);
+                outOfMoves = outOfMoves(landmarkPoints, buildings);
                 if (outOfMoves){
                     break topLoop;
                 }
@@ -83,13 +73,13 @@ public class Drone {
         if (!outOfMoves) {
             this.hover();
             path.add(Point.fromLngLat(position.lng, position.lat));
-            //orders.insertIntoFlightpath(orderNo, position.lng, position.lat, LongLat.HOVER, position.lng, position.lat);
-            outOfMoves = outOfMoves(landmarkPoints, buildings, orders, orderNo);
+
+            outOfMoves = outOfMoves(landmarkPoints, buildings);
         }
         return path;
     }
 
-    public List<Point> algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path, Orders orders, String orderNo){
+    public List<Point> algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path){
 
         int bestAngle;
 
@@ -99,31 +89,21 @@ public class Drone {
                 LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, appletonTower, buildings);
                 while (!position.closeTo(closestLandmark)){
                     bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
-
-                    //LongLat previousPosition = new LongLat(position.lng, position.lat);
-
                     fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
-
-                    //orders.insertIntoFlightpath(orderNo, previousPosition.lng, previousPosition.lat, bestAngle, position.lng, position.lat);
                 }
             }
             else{
                 bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(appletonTower), appletonTower);
-
-                //LongLat previousPosition = new LongLat(position.lng, position.lat);
-
                 fly(bestAngle);
                 path.add(Point.fromLngLat(position.lng, position.lat));
-
-                //orders.insertIntoFlightpath(orderNo, previousPosition.lng, previousPosition.lat, bestAngle, position.lng, position.lat);
             }
         }
 
         return path;
     }
 
-    public boolean outOfMoves(List<Point> landmarkPoints, Buildings buildings, Orders orders, String orderNo){
+    public boolean outOfMoves(List<Point> landmarkPoints, Buildings buildings){
 
         Drone dummyDrone = new Drone();
         dummyDrone.position = position;
@@ -131,11 +111,13 @@ public class Drone {
 
         List<Point> dummyList = new ArrayList<>();
 
-        dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList, orders, orderNo);
+        dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList);
 
         return (battery - dummyDrone.moves < 5);
 
     }
+
+    //Getters and Setters:
 
     public LongLat getPosition(){
         return position;
