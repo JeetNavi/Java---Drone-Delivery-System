@@ -8,7 +8,7 @@ import java.util.List;
 public class LongLat {
 
     //This is the distance a drone moves when flying and is the distance used to check whether two locations are close
-    public static final double DEFAULT_DISTANCE = 0.00015;
+    private static final double DEFAULT_DISTANCE = 0.00015;
     public static final double LONGITUDE_BOUNDARY_WEST = -3.192473;
     public static final double LONGITUDE_BOUNDARY_EAST = -3.184319;
     public static final double LATITUDE_BOUNDARY_NORTH = 55.946233;

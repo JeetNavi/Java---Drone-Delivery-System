@@ -124,7 +124,7 @@ public class Menus {
     }
 
     public String[] getTspShopsToVisitList (LongLat currentPosition, String[] shopsToVisit, Map<String, LongLat> shopsToLonglat,
-                                            LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings){
+                                            LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings, Orders orders, String orderNo){
 
 
         if(shopsToVisit.length == 2) {
@@ -139,15 +139,15 @@ public class Menus {
 
             for (String shop : shopsToVisit){
                 LongLat destination = shopsToLonglat.get(shop);
-                testDrone1.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
+                testDrone1.algorithm(landmarkPoints, destination, buildings, new ArrayList<>(), orders, orderNo);
             }
-            testDrone1.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>());
+            testDrone1.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>(), orders, orderNo);
 
             for (String shop: shopsToVisit2){
                 LongLat destination = shopsToLonglat.get(shop);
-                testDrone2.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
+                testDrone2.algorithm(landmarkPoints, destination, buildings, new ArrayList<>(), orders, orderNo);
             }
-            testDrone2.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>());
+            testDrone2.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>(), orders, orderNo);
 
             if (testDrone1.moves > testDrone2.moves){
                 return shopsToVisit2;

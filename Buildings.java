@@ -24,14 +24,12 @@ public class Buildings {
         this.webPort = webPort;
 
         try {
-
-            System.out.println(webPort); //i checked and this does output 9898
+            
 
             HttpRequest request = HttpRequest.newBuilder() //HTTP GET request.
                     .uri(URI.create("http://localhost:" + webPort + "/buildings/no-fly-zones.geojson"))
                     .build();
             response = Menus.client.send(request, HttpResponse.BodyHandlers.ofString());
-            System.out.println("hi");
 
         } catch (IllegalArgumentException e){
 

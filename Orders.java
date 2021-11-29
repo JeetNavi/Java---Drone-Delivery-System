@@ -6,6 +6,7 @@ import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Orders {
 
@@ -18,6 +19,10 @@ public class Orders {
 
     MultiValuedMap<String, String> orderItemMap = new ArrayListValuedHashMap<>();
     Map<String, String> orderNoDeliverToMap = new HashMap<>();
+    Connection conn;
+
+    PreparedStatement psFlightpath;
+    PreparedStatement psDeliveries;
 
     Orders(String dbPort, Date fullDate){
 
@@ -26,7 +31,8 @@ public class Orders {
 
         try{
 
-            Connection conn = DriverManager.getConnection("jdbc:derby://localhost:" + dbPort + "/derbyDB");
+            conn = DriverManager.getConnection("jdbc:derby://localhost:" + dbPort + "/derbyDB");
+            //conn.setAutoCommit(false);
             Statement statement = conn.createStatement();
 
             final String ordersQuery = "select * from orders where deliveryDate=(?)";
@@ -58,6 +64,39 @@ public class Orders {
                     e.printStackTrace();
                 }
             }
+
+            DatabaseMetaData databaseMetaData = conn.getMetaData();
+            ResultSet resultSet = databaseMetaData.getTables(null, null, "DELIVERIES", null);
+            if (resultSet.next()){
+                statement.execute("drop table deliveries");
+                System.out.println("dropped deliveries table");
+            }
+            resultSet = databaseMetaData.getTables(null, null, "FLIGHTPATH", null);
+            if (resultSet.next()){
+                statement.execute("drop table flightpath");
+                System.out.println("dropped flightpath table");
+            }
+
+            statement.execute("create table flightpath(" +
+                    "orderNo char(8)," +
+                    "fromLongitude double," +
+                    "fromLatitude double," +
+                    "angle integer," +
+                    "toLongitude double," +
+                    "toLatitude double)");
+
+            statement.execute("create table deliveries(" +
+                    "orderNo char(8)," +
+                    "deliveredTo varchar(19)," +
+                    "costInPence int)");
+
+
+            psFlightpath = conn.prepareStatement(
+                    "insert into flightpath values (?, ?, ?, ?, ?, ?)");
+
+            psDeliveries = conn.prepareStatement(
+                    "insert into deliveries values (?, ?, ?)");
+
 
         } catch (java.sql.SQLException e){
             e.printStackTrace();
@@ -98,5 +137,62 @@ public class Orders {
 
         return orderNoToDeliverToLongLat;
     }
+
+    public Map<String, Integer> getOrderedValuableOrdersToCostMap (Menus menus){
+
+        Map<String, Integer> orderedValuableOrdersToCostMap = new HashMap<>();
+
+        for (String orderNo : orderNoList){
+            int cost = menus.getDeliveryCost(getItemNamesFromOrder(orderNo));
+            orderedValuableOrdersToCostMap.put(orderNo, cost);
+        }
+
+        List<Map.Entry<String, Integer>> list = new LinkedList<>(orderedValuableOrdersToCostMap.entrySet());
+
+        // Sorting the list based on values
+        list.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()) == 0
+        ? o2.getKey().compareTo(o1.getKey())
+        : o2.getValue().compareTo(o1.getValue()));
+        return list.stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> b, LinkedHashMap::new));
+
+    }
+
+    public void insertIntoDeliveries (String orderNo, int costInPence){
+
+
+
+        try{
+            psDeliveries.setString(1, orderNo);
+            psDeliveries.setString(2, orderNoDeliverToMap.get(orderNo));
+            psDeliveries.setInt(3, costInPence);
+            psDeliveries.execute();
+        } catch (java.sql.SQLException e){
+            e.printStackTrace();
+
+        }
+
+
+
+
+    }
+
+    public void insertIntoFlightpath (String orderNo, double fromLongitude, double fromLatitude, int angle, double toLongitude, double toLatitude){
+
+
+
+        try{
+            psFlightpath.setString(1, orderNo);
+            psFlightpath.setDouble(2, fromLongitude);
+            psFlightpath.setDouble(3, fromLatitude);
+            psFlightpath.setInt(4, angle);
+            psFlightpath.setDouble(5, toLongitude);
+            psFlightpath.setDouble(6, toLatitude);
+            psFlightpath.execute();
+        } catch (java.sql.SQLException e){
+            e.printStackTrace();
+        }
+
+    }
+
 
 }
