@@ -32,7 +32,7 @@ public class App {
         Date fullDate = Date.valueOf(args[2] + "-" + args[1] + "-" + args[0]);
 
 
-        Orders order = new Orders(dbPort, fullDate);
+        Orders orders = new Orders(dbPort, fullDate);
 
         Menus menu = new Menus(webPort);
         Map<String, LongLat> shopsToLongLat = menu.getShopsToLongLat();
@@ -40,20 +40,12 @@ public class App {
         //CREATE MAP THAT MAPS ORDERNO TO LIST OF SHOPS
         //
 
-        System.out.println(order.getOrderNoList());
-        System.out.println(order.getDeliverToList());
-        List<String> orderNoList = order.getOrderNoList();
+        Map<String, Integer> ordersSortedByValue = orders.getOrderedValuableOrdersToCostMap(menu);
 
 
         Buildings buildings = new Buildings(webPort);
         List<Point> landmarkPoints = buildings.getLandmarksPoints();
-        List<Polygon> nfzPolygons = buildings.getNfzPolygons();
-        List<List<List<Point>>> nfzCornerPoints = buildings.getNfzCornerPoints();
 
-
-        LongLat kfc = new LongLat(LongLat.LONGITUDE_BOUNDARY_EAST, LongLat.LATITUDE_BOUNDARY_NORTH);
-        LongLat topMeadows = new LongLat(LongLat.LONGITUDE_BOUNDARY_WEST, LongLat.LATITUDE_BOUNDARY_SOUTH);
-        //LongLat appleton = new LongLat(LongLat.APPLETON_LONGITUDE, LongLat.APPLETON_LATITUDE);
         Point appleton = Point.fromLngLat(LongLat.APPLETON_LONGITUDE, LongLat.APPLETON_LATITUDE);
 
         //LongLat drone = new LongLat(topMeadows.lng, topMeadows.lat);
@@ -73,7 +65,7 @@ public class App {
 
 
 
-        LongLat dest = kfc;
+
 
         /**
          while (!drone.position.closeTo(dest)){
@@ -111,35 +103,74 @@ public class App {
         //path = drone.algorithm(landmarkPoints, dest, buildings, path);
         //Map<String, LongLat> shopsToLongLat = menu.getShopsToLongLat();
 
+        String currentOrderNo = null;
+
+        double totalMonetaryValuePlaced = 0;
+        double monetaryValue = 0;
+        for (double orderCost : ordersSortedByValue.values()){
+            totalMonetaryValuePlaced += orderCost;
+        }
+
         topLoop:
-        for (String orderNo : orderNoList){
-            Collection<String> itemNames = order.getItemNamesFromOrder(orderNo);
+        for (String orderNo : ordersSortedByValue.keySet()){
+            Collection<String> itemNames = orders.getItemNamesFromOrder(orderNo);
             String[] shopsToVisit = menu.shopsArrayFromItems(itemNames);
-            Map<String, LongLat> OrderNoToDeliverToLongLat = order.getOrderNoToDeliverToLongLat(webPort);
+            Map<String, LongLat> OrderNoToDeliverToLongLat = orders.getOrderNoToDeliverToLongLat(webPort);
             LongLat deliverToLongLat = OrderNoToDeliverToLongLat.get(orderNo);
-            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.position, shopsToVisit, shopsToLongLat, deliverToLongLat, landmarkPoints, buildings);
+            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.position, shopsToVisit, shopsToLongLat, deliverToLongLat, landmarkPoints, buildings, orders, orderNo);
             for (String shop : tspShopsToVisit){
                 LongLat destination = shopsToLongLat.get(shop);
-                path = drone.algorithm(landmarkPoints, destination, buildings, path);
-                if (drone.outOfMovess){
+                path = drone.algorithm(landmarkPoints, destination, buildings, path, orders, orderNo);
+                if (drone.outOfMoves){
                     break topLoop;
                 }
             }
-            path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path);
-            System.out.println(drone.moves);
-            System.out.println(drone.battery);
+            path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path, orders, orderNo);
+            int costInPenceOfOrder = ordersSortedByValue.get(orderNo);
+            monetaryValue += costInPenceOfOrder;
+            orders.insertIntoDeliveries(orderNo, costInPenceOfOrder);
+
+            int counter = 0;
+            for (LongLat moveFrom : drone.movesFrom){
+                orders.insertIntoFlightpath(orderNo, moveFrom.lng, moveFrom.lat,
+                        drone.anglesOfMoves.get(counter), drone.movesTo.get(counter).lng, drone.movesTo.get(counter).lat);
+                counter+=1;
+            }
+
+            drone.movesFrom.clear();
+            drone.movesTo.clear();
+            drone.anglesOfMoves.clear();
+
+            currentOrderNo = orderNo;
 
         }
-        path = drone.algorithmEnd(landmarkPoints, buildings, path);
 
+
+        //this is for when you realise you have no moves left, you break out of the toploop but never insert into table
+        int counter = 0;
+        for (LongLat moveFrom : drone.movesFrom){
+            orders.insertIntoFlightpath(currentOrderNo, moveFrom.lng, moveFrom.lat,
+                    drone.anglesOfMoves.get(counter), drone.movesTo.get(counter).lng, drone.movesTo.get(counter).lat);
+            counter+=1;
+        }
+
+        drone.movesFrom.clear();
+        drone.movesTo.clear();
+        drone.anglesOfMoves.clear();
+
+
+        path = drone.algorithmEnd(landmarkPoints, buildings, path, orders, null);
+
+        counter = 0;
+        for (LongLat moveFrom : drone.movesFrom){
+            orders.insertIntoFlightpath(null, moveFrom.lng, moveFrom.lat,
+                    drone.anglesOfMoves.get(counter), drone.movesTo.get(counter).lng, drone.movesTo.get(counter).lat);
+            counter+=1;
+        }
+
+        double percentageMonetaryValue = (monetaryValue / totalMonetaryValuePlaced) * 100;
+        System.out.println(percentageMonetaryValue);
         System.out.println(drone.moves);
-        System.out.println(drone.battery);
-
-
-        //System.out.println(drone.battery);
-        //System.out.println(drone.position.lng);
-        //System.out.println(drone.position.lat);
-        //System.out.println(drone.moves);
 
 
         //CREATING THE GEOJSON FILE
