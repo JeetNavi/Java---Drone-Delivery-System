@@ -15,9 +15,10 @@ public class Buildings {
 
     public final String webPort;
 
-    private List <Point> landmarkPoints = new ArrayList<>();
-    private List <Polygon> nfzPolygons = new ArrayList<>();
-    private List<List<List<Point>>> nfzCornerPoints = new ArrayList<>();
+    public static final List <Point> landmarkPoints = new ArrayList<>();
+    public static final List <Polygon> nfzPolygons = new ArrayList<>();
+    public static final List<List<List<Point>>> nfzCornerPoints = new ArrayList<>();
+    public static final List<Line2D> nfzEdges = new ArrayList<>();
 
     Buildings(String webPort){
 
@@ -66,7 +67,6 @@ public class Buildings {
 
         FeatureCollection fc = FeatureCollection.fromJson(NfzGeoJson);
         List<Feature> featureObjects = fc.features();
-        List <Geometry> geometryObjects = new ArrayList<>();
 
 
         assert featureObjects != null;
@@ -144,40 +144,39 @@ public class Buildings {
             landmarkPoints.add((Point)f.geometry());
             //pointObjects.add(((Polygon)f.geometry()).coordinates());
         }
+
+
+
+        for (List<List<Point>> PolygonsCorners : nfzCornerPoints) {
+            for (List<Point> PolygonCorners : PolygonsCorners) {
+                for (int i = 0; i < PolygonCorners.size() - 1; i++) {
+                    nfzEdges.add(new Line2D.Double(PolygonCorners.get(i).longitude(), PolygonCorners.get(i).latitude(),
+                            PolygonCorners.get(i + 1).longitude(), PolygonCorners.get(i + 1).latitude()));
+                }
+            }
+        }
     }
 
-    public List<Point> getLandmarksPoints(){
-        return landmarkPoints;
-    }
-
-    public List<Polygon> getNfzPolygons(){
-        return nfzPolygons;
-    }
-
-    public List<List<List<Point>>> getNfzCornerPoints(){
-        return nfzCornerPoints;
-    }
 
     public boolean checkDirectRoute(LongLat start, LongLat destination){
         Line2D lineToDest = new Line2D.Double(start.lng, start.lat, destination.lng, destination.lat);
 
         boolean directRoute = true;
 
-        for (List<List<Point>> PolygonsCorners : nfzCornerPoints) {
-            for (List<Point> PolygonCorners : PolygonsCorners) {
-                for (int i = 0; i < PolygonCorners.size() - 1; i++) {
-                    Line2D line2 = new Line2D.Double(PolygonCorners.get(i).longitude(), PolygonCorners.get(i).latitude(),
-                            PolygonCorners.get(i + 1).longitude(), PolygonCorners.get(i + 1).latitude());
-                    if (line2.intersectsLine(lineToDest)) {
-                        directRoute = false;
-                    }
-                }
+        for (Line2D edge : nfzEdges){
+            if (edge.intersectsLine(lineToDest)){
+                directRoute = false;
+                break;
             }
         }
 
         return directRoute;
 
+
+
     }
+
+
 
 
 }

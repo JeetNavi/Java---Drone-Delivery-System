@@ -8,13 +8,8 @@ import java.util.List;
 public class LongLat {
 
     //This is the distance a drone moves when flying and is the distance used to check whether two locations are close
-    private static final double DEFAULT_DISTANCE = 0.00015;
-    public static final double LONGITUDE_BOUNDARY_WEST = -3.192473;
-    public static final double LONGITUDE_BOUNDARY_EAST = -3.184319;
-    public static final double LATITUDE_BOUNDARY_NORTH = 55.946233;
-    public static final double LATITUDE_BOUNDARY_SOUTH = 55.942617;
-    public static final double APPLETON_LONGITUDE = -3.186874;
-    public static final double APPLETON_LATITUDE = 55.944494;
+    public static final double DEFAULT_DISTANCE = 0.00015;
+
     public static final int NORTH = 90;
     public static final int EAST = 0;
     public static final int SOUTH = 270;
@@ -33,16 +28,6 @@ public class LongLat {
     LongLat(double longitude, double latitude) {
         this.lng = longitude;
         this.lat = latitude;
-    }
-
-    /**
-     * Method that checks whether or not the position of the drone is in the drone confinement area.
-     *
-     * @return true if the current position of the drone is in the drone confinement area.
-     */
-    public boolean isConfined() {
-        return ((lng > LONGITUDE_BOUNDARY_WEST) && (lng < LONGITUDE_BOUNDARY_EAST))
-                && ((lat > LATITUDE_BOUNDARY_SOUTH) && (lat < LATITUDE_BOUNDARY_NORTH));
     }
 
     /**
@@ -175,43 +160,37 @@ public class LongLat {
             landmarkLongLats.add(new LongLat(p.longitude(), p.latitude()));
         }
 
-        LongLat closest = new LongLat(999,999);
+        LongLat closest = new LongLat(-999,-999);
 
         for (LongLat landmark : landmarkLongLats){
-            if (destination.distanceTo(landmark) < destination.distanceTo(closest)) {
-                if(buildings.checkDirectRoute(this, landmark)){
-                    closest = landmark;
-                }
+            if (destination.distanceTo(landmark) < destination.distanceTo(closest) && buildings.checkDirectRoute(this, landmark)) {
+                closest = landmark;
             }
 
-        }
-
-        if (closest.lng == 999){
-            closest = landmarkLongLats.get(1);
         }
         return closest; //maybe move this method to buildings?
     }
 
-    public int angleToDodgePotentialNfz (Buildings buildings, LongLat currentPosition, int bestAngle , LongLat destination){
+    public int angleToDodgePotentialNfz (Buildings buildings, int bestAngle , LongLat destination){
 
         int potentialAdjustedAngle1 = (bestAngle + 10) % 360;
         int potentialAdjustedAngle2 = (bestAngle - 10) % 360;
 
-        LongLat potentialNextPosition = (currentPosition.nextPosition(bestAngle));
-        LongLat potentialNextAdjustedPosition1 = (currentPosition.nextPosition(potentialAdjustedAngle1));
-        LongLat potentialNextAdjustedPosition2 = (currentPosition.nextPosition(potentialAdjustedAngle2));
+        LongLat potentialNextPosition = (nextPosition(bestAngle));
+        LongLat potentialNextAdjustedPosition1 = (nextPosition(potentialAdjustedAngle1));
+        LongLat potentialNextAdjustedPosition2 = (nextPosition(potentialAdjustedAngle2));
 
-        if (!buildings.checkDirectRoute(currentPosition, potentialNextPosition)) {
-            if (buildings.checkDirectRoute(currentPosition, potentialNextAdjustedPosition1)) {
+        if (!buildings.checkDirectRoute(this, potentialNextPosition)) {
+            if (buildings.checkDirectRoute(this, potentialNextAdjustedPosition1)) {
                 bestAngle = potentialAdjustedAngle1; //say about rounding to 10 causing unexpected journey through nfz so we check for + and - 10
-            } else if (buildings.checkDirectRoute(currentPosition, potentialNextAdjustedPosition2)){
+            } else if (buildings.checkDirectRoute(this, potentialNextAdjustedPosition2)){
                 bestAngle = potentialAdjustedAngle2;
             }else{
-                double distanceOne = currentPosition.nextPosition(potentialAdjustedAngle1).distanceTo(destination);
-                double distanceTwo = currentPosition.nextPosition(potentialAdjustedAngle2).distanceTo(destination);
+                double distanceOne = nextPosition(potentialAdjustedAngle1).distanceTo(destination);
+                double distanceTwo = nextPosition(potentialAdjustedAngle2).distanceTo(destination);
                 if (distanceOne < distanceTwo){
-                    return angleToDodgePotentialNfz(buildings, currentPosition, potentialAdjustedAngle1, destination);
-                } else return angleToDodgePotentialNfz(buildings, currentPosition, potentialAdjustedAngle2, destination);
+                    return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle1, destination);
+                } else return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle2, destination);
             }
         }
         return bestAngle;

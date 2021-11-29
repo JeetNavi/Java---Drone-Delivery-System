@@ -8,9 +8,8 @@ import java.net.http.HttpResponse;
 
 public class Words {
 
-    private HttpResponse<String> response = null;
-
     public final String webPort;
+    private static LongLat coordinates;
 
     Words(String webPort, String[] threeWords) {
             this.webPort = webPort;
@@ -24,7 +23,15 @@ public class Words {
             HttpRequest request = HttpRequest.newBuilder() //HTTP GET request.
                     .uri(URI.create("http://localhost:" + webPort + "/words/" + wordOne + "/" + wordTwo + "/" + wordThree + "/details.json"))
                     .build();
-            response = Menus.client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = Menus.client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if(response.statusCode() == Menus.SUCCESSFUL_RESPONSE_CODE){
+                coordinates = new Gson().fromJson(response.body(), w3wDetails.class).coordinates;
+            }
+            else {
+                System.err.println("Status code is not 200.");
+                System.exit(1);
+            }
 
         } catch (IllegalArgumentException e){
 
@@ -42,24 +49,10 @@ public class Words {
 
             System.out.println("An exception has occurred");
             e.printStackTrace();
-
         }
     }
 
-    public LongLat getCoords(){
-        assert response != null;
-
-        w3wDetails details = null;
-
-
-        if(response.statusCode() == Menus.SUCCESSFUL_RESPONSE_CODE){
-            details = new Gson().fromJson(response.body(), w3wDetails.class);
-        }
-        else {
-            System.out.println("Status code is not 200.");
-            System.exit(1);
-        }
-
-        return details.coordinates;
+    public LongLat getCoordinates(){
+        return coordinates;
     }
 }

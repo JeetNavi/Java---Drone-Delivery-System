@@ -117,23 +117,24 @@ public class Menus {
 
         for (String shop : shopToWords.keySet()){
             Words words = new Words(webPort, shopToWords.get(shop));
-            shopsToLongLat.put(shop, words.getCoords());
+            shopsToLongLat.put(shop, words.getCoordinates());
         }
 
         return shopsToLongLat;
     }
 
-    public String[] getTspShopsToVisitList (LongLat currentPosition, String[] shopsToVisit, Map<String, LongLat> shopsToLonglat,
+    public String[] getTspShopsToVisitList (LongLat currentPosition, String[] shopsToVisit,
                                             LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings, Orders orders, String orderNo){
 
+        Map<String, LongLat> shopsToLonglat = getShopsToLongLat();
 
         if(shopsToVisit.length == 2) {
 
             Drone testDrone1 = new Drone();
-            testDrone1.position = currentPosition;
+            testDrone1.setPosition(currentPosition);
 
             Drone testDrone2 = new Drone();
-            testDrone2.position = currentPosition;
+            testDrone2.setPosition(currentPosition);
 
             String[] shopsToVisit2 = {shopsToVisit[1], shopsToVisit[0]};
 
@@ -149,7 +150,7 @@ public class Menus {
             }
             testDrone2.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>(), orders, orderNo);
 
-            if (testDrone1.moves > testDrone2.moves){
+            if (testDrone1.getMoves() > testDrone2.getMoves()){
                 return shopsToVisit2;
             }
 
