@@ -7,15 +7,17 @@ import java.util.List;
 
 public class Drone {
 
-    public LongLat appletonTower = new LongLat(-3.186874, 55.944494);
 
-    public LongLat position = appletonTower;
-    public int battery = 1500;
-    public int moves = 0;
-    public boolean outOfMoves = false;
-    public List<LongLat> movesFrom = new ArrayList<>();
-    public List<LongLat> movesTo = new ArrayList<>();
-    public List<Integer> anglesOfMoves = new ArrayList<>();
+    public static final LongLat appletonTower = new LongLat(-3.186874, 55.944494);
+
+    private LongLat position = appletonTower;
+    private int battery = 1500;
+    private int moves = 0;
+    private boolean outOfMoves = false;
+
+    private List<LongLat> movesFrom = new ArrayList<>();
+    private List<LongLat> movesTo = new ArrayList<>();
+    private List<Integer> anglesOfMoves = new ArrayList<>();
 
 
     public void fly(int angle){
@@ -47,7 +49,7 @@ public class Drone {
             if (!buildings.checkDirectRoute(position, destination)) {
                 LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
                 while (!position.closeTo(closestLandmark)){
-                    bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(closestLandmark), closestLandmark);
+                    bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
 
                     //LongLat previousPosition = new LongLat(position.lng, position.lat);
 
@@ -63,7 +65,7 @@ public class Drone {
                 }
             }
             else{
-                bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(destination), destination);
+                bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(destination), destination);
 
                 //LongLat previousPosition = new LongLat(position.lng, position.lat);
 
@@ -96,7 +98,7 @@ public class Drone {
             if (!buildings.checkDirectRoute(position, appletonTower)) {
                 LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, appletonTower, buildings);
                 while (!position.closeTo(closestLandmark)){
-                    bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(closestLandmark), closestLandmark);
+                    bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
 
                     //LongLat previousPosition = new LongLat(position.lng, position.lat);
 
@@ -107,7 +109,7 @@ public class Drone {
                 }
             }
             else{
-                bestAngle = position.angleToDodgePotentialNfz(buildings, position, position.bestAngle(appletonTower), appletonTower);
+                bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(appletonTower), appletonTower);
 
                 //LongLat previousPosition = new LongLat(position.lng, position.lat);
 
@@ -133,6 +135,46 @@ public class Drone {
 
         return (battery - dummyDrone.moves < 5);
 
+    }
+
+    public LongLat getPosition(){
+        return position;
+    }
+
+    public int getMoves(){
+        return moves;
+    }
+
+    public boolean getOutOfMoves(){
+        return outOfMoves;
+    }
+
+    public List<LongLat> getMovesFrom(){
+        return movesFrom;
+    }
+
+    public List<LongLat> getMovesTo(){
+        return movesTo;
+    }
+
+    public List<Integer> getAnglesOfMoves(){
+        return anglesOfMoves;
+    }
+
+    public void setPosition(LongLat newPosition){
+        this.position = newPosition;
+    }
+
+    public void setMovesFrom(List<LongLat> newMovesFrom){
+        this.movesFrom = newMovesFrom;
+    }
+
+    public void setMovesTo(List<LongLat> newMovesTo){
+        this.movesTo = newMovesTo;
+    }
+
+    public void setAnglesOfMoves(List<Integer> newAnglesOfMoves){
+        this.anglesOfMoves = newAnglesOfMoves;
     }
 
 }

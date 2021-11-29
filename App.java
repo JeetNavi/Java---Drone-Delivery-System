@@ -23,6 +23,9 @@ import java.util.*;
 public class App {
     public static void main(String[] args) {
 
+        final double APPLETON_LONGITUDE = -3.186874;
+        final double APPLETON_LATITUDE = 55.944494;
+
         //final HttpClient client = HttpClient.newHttpClient(); //Only 1 client is created for all requests.
         String date = args[0];
         String month = args[1];
@@ -40,13 +43,15 @@ public class App {
         //CREATE MAP THAT MAPS ORDERNO TO LIST OF SHOPS
         //
 
-        Map<String, Integer> ordersSortedByValue = orders.getOrderedValuableOrdersToCostMap(menu);
+        Map<String, Integer> ordersSortedByValue = Orders.getOrderedValuableOrdersToCostMap(menu);
 
 
         Buildings buildings = new Buildings(webPort);
-        List<Point> landmarkPoints = buildings.getLandmarksPoints();
+        List<Point> landmarkPoints = Buildings.landmarkPoints;
+        Point appleton = Point.fromLngLat(APPLETON_LONGITUDE, APPLETON_LATITUDE);
+        landmarkPoints.add(appleton);
 
-        Point appleton = Point.fromLngLat(LongLat.APPLETON_LONGITUDE, LongLat.APPLETON_LATITUDE);
+
 
         //LongLat drone = new LongLat(topMeadows.lng, topMeadows.lat);
 
@@ -61,7 +66,6 @@ public class App {
         path.add(Point.fromLngLat(appleton.longitude(), appleton.latitude()));
 
         //List<Point> landmarkPoints = new ArrayList<>();
-        landmarkPoints.add(appleton);
 
 
 
@@ -111,35 +115,36 @@ public class App {
             totalMonetaryValuePlaced += orderCost;
         }
 
+        Map<String, LongLat> OrderNoToDeliverToLongLat = Orders.getOrderNoToDeliverToLongLat(webPort);
+
         topLoop:
         for (String orderNo : ordersSortedByValue.keySet()){
-            Collection<String> itemNames = orders.getItemNamesFromOrder(orderNo);
+            Collection<String> itemNames = Orders.getItemNamesFromOrder(orderNo);
             String[] shopsToVisit = menu.shopsArrayFromItems(itemNames);
-            Map<String, LongLat> OrderNoToDeliverToLongLat = orders.getOrderNoToDeliverToLongLat(webPort);
             LongLat deliverToLongLat = OrderNoToDeliverToLongLat.get(orderNo);
-            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.position, shopsToVisit, shopsToLongLat, deliverToLongLat, landmarkPoints, buildings, orders, orderNo);
+            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.getPosition(), shopsToVisit, deliverToLongLat, landmarkPoints, buildings, orders, orderNo);
             for (String shop : tspShopsToVisit){
                 LongLat destination = shopsToLongLat.get(shop);
                 path = drone.algorithm(landmarkPoints, destination, buildings, path, orders, orderNo);
-                if (drone.outOfMoves){
+                if (drone.getOutOfMoves()){
                     break topLoop;
                 }
             }
             path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path, orders, orderNo);
             int costInPenceOfOrder = ordersSortedByValue.get(orderNo);
             monetaryValue += costInPenceOfOrder;
-            orders.insertIntoDeliveries(orderNo, costInPenceOfOrder);
+            Orders.insertIntoDeliveries(orderNo, costInPenceOfOrder);
 
             int counter = 0;
-            for (LongLat moveFrom : drone.movesFrom){
-                orders.insertIntoFlightpath(orderNo, moveFrom.lng, moveFrom.lat,
-                        drone.anglesOfMoves.get(counter), drone.movesTo.get(counter).lng, drone.movesTo.get(counter).lat);
+            for (LongLat moveFrom : drone.getMovesFrom()){
+                Orders.insertIntoFlightpath(orderNo, moveFrom.lng, moveFrom.lat,
+                        drone.getAnglesOfMoves().get(counter), drone.getMovesTo().get(counter).lng, drone.getMovesTo().get(counter).lat);
                 counter+=1;
             }
 
-            drone.movesFrom.clear();
-            drone.movesTo.clear();
-            drone.anglesOfMoves.clear();
+            drone.setMovesFrom(new ArrayList<LongLat>());
+            drone.setMovesTo(new ArrayList<LongLat>());
+            drone.setAnglesOfMoves(new ArrayList<Integer>());
 
             currentOrderNo = orderNo;
 
@@ -148,29 +153,29 @@ public class App {
 
         //this is for when you realise you have no moves left, you break out of the toploop but never insert into table
         int counter = 0;
-        for (LongLat moveFrom : drone.movesFrom){
-            orders.insertIntoFlightpath(currentOrderNo, moveFrom.lng, moveFrom.lat,
-                    drone.anglesOfMoves.get(counter), drone.movesTo.get(counter).lng, drone.movesTo.get(counter).lat);
+        for (LongLat moveFrom : drone.getMovesFrom()){
+            Orders.insertIntoFlightpath(currentOrderNo, moveFrom.lng, moveFrom.lat,
+                    drone.getAnglesOfMoves().get(counter), drone.getMovesTo().get(counter).lng, drone.getMovesTo().get(counter).lat);
             counter+=1;
         }
 
-        drone.movesFrom.clear();
-        drone.movesTo.clear();
-        drone.anglesOfMoves.clear();
+        drone.setMovesFrom(new ArrayList<LongLat>());
+        drone.setMovesTo(new ArrayList<LongLat>());
+        drone.setAnglesOfMoves(new ArrayList<Integer>());
 
 
         path = drone.algorithmEnd(landmarkPoints, buildings, path, orders, null);
 
         counter = 0;
-        for (LongLat moveFrom : drone.movesFrom){
-            orders.insertIntoFlightpath(null, moveFrom.lng, moveFrom.lat,
-                    drone.anglesOfMoves.get(counter), drone.movesTo.get(counter).lng, drone.movesTo.get(counter).lat);
+        for (LongLat moveFrom : drone.getMovesFrom()){
+            Orders.insertIntoFlightpath(null, moveFrom.lng, moveFrom.lat,
+                    drone.getAnglesOfMoves().get(counter), drone.getMovesTo().get(counter).lng, drone.getMovesTo().get(counter).lat);
             counter+=1;
         }
 
         double percentageMonetaryValue = (monetaryValue / totalMonetaryValuePlaced) * 100;
         System.out.println(percentageMonetaryValue);
-        System.out.println(drone.moves);
+        System.out.println(drone.getMoves());
 
 
         //CREATING THE GEOJSON FILE

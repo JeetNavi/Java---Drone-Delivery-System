@@ -13,16 +13,14 @@ public class Orders {
     public final String dbPort;
     public final Date fullDate;
 
-    public List<String> orderNoList = new ArrayList<String>();
-    public List<String> customerList = new ArrayList<>();
-    public List<String> deliverToList = new ArrayList<>();
+    public static final List<String> orderNoList = new ArrayList<String>();
+    public static final List<String> customerList = new ArrayList<>();
+    public static final List<String> deliverToList = new ArrayList<>();
+    public static final MultiValuedMap<String, String> orderItemMap = new ArrayListValuedHashMap<>();
+    public static final Map<String, String> orderNoDeliverToMap = new HashMap<>();
 
-    MultiValuedMap<String, String> orderItemMap = new ArrayListValuedHashMap<>();
-    Map<String, String> orderNoDeliverToMap = new HashMap<>();
-    Connection conn;
-
-    PreparedStatement psFlightpath;
-    PreparedStatement psDeliveries;
+    private static PreparedStatement psFlightpath;
+    private static PreparedStatement psDeliveries;
 
     Orders(String dbPort, Date fullDate){
 
@@ -31,7 +29,7 @@ public class Orders {
 
         try{
 
-            conn = DriverManager.getConnection("jdbc:derby://localhost:" + dbPort + "/derbyDB");
+            Connection conn = DriverManager.getConnection("jdbc:derby://localhost:" + dbPort + "/derbyDB");
             //conn.setAutoCommit(false);
             Statement statement = conn.createStatement();
 
@@ -106,44 +104,29 @@ public class Orders {
 
     }
 
-    public Collection<String> getItemNamesFromOrder(String orderNo){
+    public static Collection<String> getItemNamesFromOrder(String orderNo){
         return (orderItemMap.get(orderNo));
     }
 
-    public List<String> getOrderNoList(){
-        return orderNoList;
-    }
 
-    public List<String> getCustomerList(){
-        return customerList;
-    }
-
-    public List<String> getDeliverToList(){
-        return deliverToList;
-    }
-
-    public Map<String, String> getOrderNoDeliverToMap() {return orderNoDeliverToMap;}
-
-    public String getDeliverToFromOrder(String orderNo) {return orderNoDeliverToMap.get(orderNo);}
-
-    public Map<String, LongLat> getOrderNoToDeliverToLongLat(String webPort){
+    public static Map<String, LongLat> getOrderNoToDeliverToLongLat(String webPort){
 
         Map<String, LongLat> orderNoToDeliverToLongLat = new HashMap<>();
 
         for (String orderNo : orderNoDeliverToMap.keySet()){
             Words words = new Words(webPort, orderNoDeliverToMap.get(orderNo).split("\\."));
-            orderNoToDeliverToLongLat.put(orderNo, words.getCoords());
+            orderNoToDeliverToLongLat.put(orderNo, words.getCoordinates());
         }
-
         return orderNoToDeliverToLongLat;
     }
 
-    public Map<String, Integer> getOrderedValuableOrdersToCostMap (Menus menus){
+
+    public static Map<String, Integer> getOrderedValuableOrdersToCostMap (Menus menus){
 
         Map<String, Integer> orderedValuableOrdersToCostMap = new HashMap<>();
 
         for (String orderNo : orderNoList){
-            int cost = menus.getDeliveryCost(getItemNamesFromOrder(orderNo));
+            int cost = menus.getDeliveryCost(orderItemMap.get(orderNo));
             orderedValuableOrdersToCostMap.put(orderNo, cost);
         }
 
@@ -157,7 +140,7 @@ public class Orders {
 
     }
 
-    public void insertIntoDeliveries (String orderNo, int costInPence){
+    public static void insertIntoDeliveries (String orderNo, int costInPence){
 
 
 
@@ -176,7 +159,7 @@ public class Orders {
 
     }
 
-    public void insertIntoFlightpath (String orderNo, double fromLongitude, double fromLatitude, int angle, double toLongitude, double toLatitude){
+    public static void insertIntoFlightpath (String orderNo, double fromLongitude, double fromLatitude, int angle, double toLongitude, double toLatitude){
 
 
 
