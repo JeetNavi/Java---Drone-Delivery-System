@@ -9,4 +9,3 @@ public class ShopDetails {
     public List<ItemDetails> menu;
 
 }
-
