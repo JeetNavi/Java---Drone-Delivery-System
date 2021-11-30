@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public class App 
+public class App
 {
     public static void main( String[] args )
     {
@@ -32,7 +32,6 @@ public class App
         Menus menu = new Menus(webPort);
         Buildings buildings = new Buildings(webPort);
 
-        Map<String, LongLat> shopsToLongLat = menu.getShopsToLongLat();
         Map<String, Integer> ordersSortedByValue = Orders.getOrderedValuableOrdersToCostMap(menu);
         Map<String, LongLat> OrderNoToDeliverToLongLat = Orders.getOrderNoToDeliverToLongLat(webPort);
 
@@ -50,75 +49,41 @@ public class App
             totalMonetaryValuePlaced += orderCost;
         }
 
-        String currentOrderNo = null;
+        int counter = 0;
 
-        int counter2 = 0;
-
-        Drone dummyDrone = new Drone();
-
-        topLoop:
         for (String orderNo : ordersSortedByValue.keySet()){
-            counter2+=1;
-            System.out.println(counter2);
-            if (counter2 == 20){
-                counter2 = counter2;
-            }
+
             Collection<String> itemNames = Orders.getItemNamesFromOrder(orderNo);
             String[] shopsToVisit = menu.shopsArrayFromItems(itemNames);
             LongLat deliverToLongLat = OrderNoToDeliverToLongLat.get(orderNo);
-            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.getPosition(), shopsToVisit, deliverToLongLat, landmarkPoints, buildings);
-            for (String shop : tspShopsToVisit){
-                LongLat destination = shopsToLongLat.get(shop);
-                path = drone.algorithm(landmarkPoints, destination, buildings, path);
-                if (drone.getOutOfMoves()){
-                    break topLoop;
+            List<LongLat> tspShopsToVisitLongLats = menu.getTspShopsToVisitLongLatList(drone.getPosition(), shopsToVisit, deliverToLongLat, landmarkPoints, buildings);
+
+            //Check if the drone has enough moves to complete the order as well as return back to AT.
+            //If it does have enough moves for this, then we execute the algorithm, update the monetary value and write into the deliveries table..
+            if (drone.sufficientNumberOfMovesForOrder(tspShopsToVisitLongLats, landmarkPoints, buildings)){
+                drone.algorithm(landmarkPoints, tspShopsToVisitLongLats, buildings, path);
+                int costInPenceOfOrder = ordersSortedByValue.get(orderNo);
+                monetaryValue += costInPenceOfOrder;
+                Orders.insertIntoDeliveries(orderNo, costInPenceOfOrder);
+                counter = 0;
+                for (LongLat moveFrom : drone.getMovesFrom()){
+                    Orders.insertIntoFlightpath(orderNo, moveFrom.lng, moveFrom.lat,
+                            drone.getAnglesOfMoves().get(counter), drone.getMovesTo().get(counter).lng, drone.getMovesTo().get(counter).lat);
+                    counter+=1;
                 }
+                //Since we have completed writing the orders' data into the tables, we can clear them and make them ready
+                //for the next order.
+                drone.setMovesFrom(new ArrayList<LongLat>());
+                drone.setMovesTo(new ArrayList<LongLat>());
+                drone.setAnglesOfMoves(new ArrayList<Integer>());
             }
-            path = drone.algorithm(landmarkPoints, deliverToLongLat, buildings, path);
-            int costInPenceOfOrder = ordersSortedByValue.get(orderNo);
-            //We keep updating this variable to find the total monetary value of orders delivered.
-            monetaryValue += costInPenceOfOrder;
-            Orders.insertIntoDeliveries(orderNo, costInPenceOfOrder);
-
-            //Beginning to write to the flightpath table.
-            int counter = 0;
-            for (LongLat moveFrom : drone.getMovesFrom()){
-                Orders.insertIntoFlightpath(orderNo, moveFrom.lng, moveFrom.lat,
-                        drone.getAnglesOfMoves().get(counter), drone.getMovesTo().get(counter).lng, drone.getMovesTo().get(counter).lat);
-                counter+=1;
-            }
-
-            //Since we are finished with the current order, and we have written everything relevant to the flightpath table
-            //about the order, we can clear the lists to begin with our next order.
-            drone.setMovesFrom(new ArrayList<LongLat>());
-            drone.setMovesTo(new ArrayList<LongLat>());
-            drone.setAnglesOfMoves(new ArrayList<Integer>());
-
-            currentOrderNo = orderNo;
         }
 
+        //After we have either completed delivering every order, or we have no battery left in the drone to deliver any
+        //more orders, we call this method that returns the drone back to AT.
+        drone.algorithmEnd(landmarkPoints, buildings, path);
 
-        //this is for when we realise we have no moves left, we break out of the topLoop but never insert into table flightpath.
-        //This is why we had to keep a variable currentOrderNo to remember the orderNo in such a situation.
-        //Beginning to write to the flightpath table.
-        int counter = 0;
-        for (LongLat moveFrom : drone.getMovesFrom()){
-            Orders.insertIntoFlightpath(currentOrderNo, moveFrom.lng, moveFrom.lat,
-                    drone.getAnglesOfMoves().get(counter), drone.getMovesTo().get(counter).lng, drone.getMovesTo().get(counter).lat);
-            counter+=1;
-        }
-
-        //Since we are done with all the orders, and have written all the relevant information to the flightpath table about
-        //the orders, we can clear these lists so that they can be updated with the information on the flightpath back to
-        //appleton tower.
-        drone.setMovesFrom(new ArrayList<LongLat>());
-        drone.setMovesTo(new ArrayList<LongLat>());
-        drone.setAnglesOfMoves(new ArrayList<Integer>());
-
-        //Path finding back to Appleton Tower.
-        path = drone.algorithmEnd(landmarkPoints, buildings, path);
-
-        //Beginning to write to the flightpath table.
+        //Write to the flightpath table.
         counter = 0;
         for (LongLat moveFrom : drone.getMovesFrom()){
             Orders.insertIntoFlightpath(null, moveFrom.lng, moveFrom.lat,
@@ -130,8 +95,6 @@ public class App
         double percentageMonetaryValue = (monetaryValue / totalMonetaryValuePlaced) * 100;
         System.out.println("Percentage monetary value is " + percentageMonetaryValue + "%");
         System.out.println(drone.getMoves() + " Moves made");
-
-
 
         LineString x = LineString.fromLngLats(path);
         Geometry g = (Geometry)x;
