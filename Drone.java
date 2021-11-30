@@ -185,15 +185,15 @@ public class Drone {
 
         int SAFETY_BUFFER = 5;
 
-        LongLat.dummyDrone.position = position;
-        LongLat.dummyDrone.moves = 0;
-        LongLat.dummyDrone.battery = 1500;
+        Drone dummyDrone = new Drone();
+        dummyDrone.position = position;
+        dummyDrone.moves = 0;
 
         List<Point> dummyList = new ArrayList<>();
 
-        LongLat.dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList);
+        dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList);
 
-        return (battery - LongLat.dummyDrone.moves < SAFETY_BUFFER);
+        return (battery - dummyDrone.moves < SAFETY_BUFFER);
 
     }
 
