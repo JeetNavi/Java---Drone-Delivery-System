@@ -7,6 +7,7 @@ import java.util.List;
 
 public class LongLat {
 
+    public static Drone dummyDrone = new Drone();
     public static final double DEFAULT_DISTANCE = 0.00015;
 
     public static final int NORTH = 90;
@@ -214,7 +215,7 @@ public class LongLat {
      */
     public int angleToDodgePotentialNfz (Buildings buildings, int bestAngle , LongLat destination){
 
-        //say about rounding to 10 causing unexpected journey through nfz so we check for + and - 10
+        //Angle rounding to 10 causing unexpected journey through nfz so we check for + and - 10
         int potentialAdjustedAngle1 = (bestAngle + 10) % 360;
         int potentialAdjustedAngle2 = (bestAngle - 10) % 360;
 

@@ -164,7 +164,7 @@ public class Menus {
         public String[] getTspShopsToVisitList (LongLat currentPosition, String[] shopsToVisit,
                 LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings, Orders orders, String orderNo){
 
-            //Max shops that can be visited per order is 2.
+            //Max number of shops that can be visited per order is 2.
             if(shopsToVisit.length == MAX_SHOPS_TO_VISIT) {
 
                 Map<String, LongLat> shopsToLonglat = getShopsToLongLat();
