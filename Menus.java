@@ -81,24 +81,24 @@ public class Menus {
         }
     }
 
-        /**
-         *
-         * Method which calculates the total price of the given items as well as a 50 pence delivery fee.
-         * This makes use of the HashMap 'prices' to retrieve the price of an item.
-         *
-         * @param items Collection of Strings which are the names of the items that we would like the prices for.
-         * @return Integer value of the total price of all items in pence, including the 50 pence delivery charge.
-         */
-        public int getDeliveryCost(Collection<String> items) {
+    /**
+     *
+     * Method which calculates the total price of the given items as well as a 50 pence delivery fee.
+     * This makes use of the HashMap 'prices' to retrieve the price of an item.
+     *
+     * @param items Collection of Strings which are the names of the items that we would like the prices for.
+     * @return Integer value of the total price of all items in pence, including the 50 pence delivery charge.
+     */
+    public int getDeliveryCost(Collection<String> items) {
 
-            int price = DELIVERY_COST;
+        int price = DELIVERY_COST;
 
-            for (String item : items) {
-                price += prices.get(item);
-            }
-
-            return price;
+        for (String item : items) {
+            price += prices.get(item);
         }
+
+        return price;
+    }
 
     /**
      *
@@ -111,15 +111,15 @@ public class Menus {
      */
     public String[] shopsArrayFromItems(Collection<String> items) {
 
-            Set<String> shops = new HashSet<>();
+        Set<String> shops = new HashSet<>();
 
-            for (String item : items){
-                shops.add(itemToShop.get(item));
-            }
-
-            return shops.toArray(String[]::new);
-
+        for (String item : items){
+            shops.add(itemToShop.get(item));
         }
+
+        return shops.toArray(String[]::new);
+
+    }
 
 
     /**
@@ -131,15 +131,15 @@ public class Menus {
      */
     public Map<String, LongLat> getShopsToLongLat (){
 
-            Map<String, LongLat> shopsToLongLat = new HashMap<>();
+        Map<String, LongLat> shopsToLongLat = new HashMap<>();
 
-            for (String shop : shopToWords.keySet()){
-                Words words = new Words(webPort, shopToWords.get(shop));
-                shopsToLongLat.put(shop, words.getCoordinates());
-            }
-
-            return shopsToLongLat;
+        for (String shop : shopToWords.keySet()){
+            Words words = new Words(webPort, shopToWords.get(shop));
+            shopsToLongLat.put(shop, words.getCoordinates());
         }
+
+        return shopsToLongLat;
+    }
 
     /**
      * Method that sorts an array of shops to visit for a given order (orderNo) such that travelling to the shops
@@ -159,44 +159,57 @@ public class Menus {
      * @param buildings Buildings object which contains information about the NFZ's that is crucial when calculating the cost of each route.
      * @return
      */
-        public String[] getTspShopsToVisitList (LongLat currentPosition, String[] shopsToVisit,
-                LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings){
+    public List<LongLat> getTspShopsToVisitLongLatList (LongLat currentPosition, String[] shopsToVisit,
+                                                        LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings){
 
-            //Max number of shops that can be visited per order is 2.
-            if(shopsToVisit.length == MAX_SHOPS_TO_VISIT) {
+        Map<String, LongLat> shopsToLonglat = getShopsToLongLat();
 
-                Map<String, LongLat> shopsToLonglat = getShopsToLongLat();
+        //Max number of shops that can be visited per order is 2.
+        if(shopsToVisit.length == MAX_SHOPS_TO_VISIT) {
 
-                Drone testDrone1 = new Drone();
-                testDrone1.setPosition(currentPosition);
 
-                Drone testDrone2 = new Drone();
-                testDrone2.setPosition(currentPosition);
+            Drone testDrone1 = new Drone();
+            testDrone1.setPosition(currentPosition);
 
-                String[] shopsToVisit2 = {shopsToVisit[1], shopsToVisit[0]};
+            Drone testDrone2 = new Drone();
+            testDrone2.setPosition(currentPosition);
 
-                for (String shop : shopsToVisit){
-                    LongLat destination = shopsToLonglat.get(shop);
-                    testDrone1.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
-                }
-                testDrone1.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>());
+            String[] shopsToVisit2 = {shopsToVisit[1], shopsToVisit[0]};
 
-                for (String shop: shopsToVisit2){
-                    LongLat destination = shopsToLonglat.get(shop);
-                    testDrone2.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
-                }
-                testDrone2.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>());
+            List<LongLat> shopsToVisitLongLats = new ArrayList<>();
+            List<LongLat> shopsToVisitLongLats2 = new ArrayList<>();
 
-                if (testDrone1.getMoves() > testDrone2.getMoves()){
-                    return shopsToVisit2;
-                }
+            for (String shop : shopsToVisit){
+                shopsToVisitLongLats.add(shopsToLonglat.get(shop));
+                //testDrone1.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
+            }
+            shopsToVisitLongLats.add(deliverToLongLat);
 
-                return shopsToVisit;
 
+            testDrone1.algorithm(landmarkPoints, shopsToVisitLongLats, buildings, new ArrayList<>());
+            //testDrone1.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>());
+
+            for (String shop: shopsToVisit2){
+                shopsToVisitLongLats2.add(shopsToLonglat.get(shop));
+                //testDrone2.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
+            }
+            shopsToVisitLongLats2.add(deliverToLongLat);
+            testDrone2.algorithm(landmarkPoints, shopsToVisitLongLats2, buildings, new ArrayList<>());
+
+            if (testDrone1.getMoves() < testDrone2.getMoves()){
+                return shopsToVisitLongLats;
             }
 
-            return shopsToVisit;
+            return shopsToVisitLongLats2;
+
         }
+        else{
+            List<LongLat> shopToVisitLongLats = new ArrayList<>();
+            shopToVisitLongLats.add(shopsToLonglat.get(shopsToVisit[0]));
+            return shopToVisitLongLats;
+        }
+
+    }
 
 }
 

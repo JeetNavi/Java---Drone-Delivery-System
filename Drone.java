@@ -13,7 +13,6 @@ public class Drone {
     private LongLat position = appletonTower;
     private int battery = 1500;
     private int moves = 0;
-    private boolean outOfMoves = false;
 
     private List<LongLat> movesFrom = new ArrayList<>();
     private List<LongLat> movesTo = new ArrayList<>();
@@ -66,72 +65,60 @@ public class Drone {
     /**
      *
      * This method is the main algorithm which controls the flightpath of the drone.
-     * This method is called if we want our drone to travel from point A to point B (destination).
+     * This method is called if we want our drone to travel to a list of locations in order, passed in as a list of
+     * LongLats called destinations.
+     * For each destination (location) in the destinations list:
      * We first check if there is a direct route to the destination without any NFZ's blocking the path.
      * If there is, then we simply take this route, while checking for unexpected NFZ's because of rounding the angle.
      * If there is not, then we direct the drone towards the landmark which is closest to the destination, then after
-     * that it is sent toward the destination as before, if there is a direct route (which there should be).
-     * We repeat this until either we are close to the destination or our drone has enough battery to only return back
-     * to Appleton Tower, in which we break out of the method completely.
+     * that, it is sent toward the destination as before, if there is a direct route (which there should be).
+     * We repeat this until we are close to the destination.
      * After every move (fly or hover), we add the new position to a list of points, which will be used for the GeoJson file
      * that we create.
      *
      *
      * @param landmarkPoints List of points which contains the locations of all the landmarks, which we may divert toward
      *                       if there is no direct route to the destination.
-     * @param destination LongLat object which is the point we are trying to move towards. This can be a landmark, shop or pick-up location.
+     * @param destinations List of LongLat objects which is the points we are trying to visit. These consist of
+     *                     landmarks, shops and a pick up location.
      * @param buildings Buildings object which contains the required information about the NFZ's that we check for when we
      *                  move toward the destination.
      * @param path List of points which we keep passing into this method until the end of the day.
      *
-     * @return List of points which contains the drones positions move by move.
-     * By the end of the day, this list should contain every position the drone moved to in order.
+     *
      */
-    public List<Point> algorithm (List<Point> landmarkPoints, LongLat destination, Buildings buildings, List<Point> path){
+    public void algorithm (List<Point> landmarkPoints, List<LongLat> destinations, Buildings buildings, List<Point> path){
 
         int bestAngle;
 
-        topLoop:
-        while (!position.closeTo(destination)){
+        for (LongLat destination : destinations) {
+
+            while (!position.closeTo(destination)) {
 
 
-            if (!buildings.checkDirectRoute(position, destination)) {
-                LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
-                while (!position.closeTo(closestLandmark)){
-                    bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
+                if (!buildings.checkDirectRoute(position, destination)) {
+                    LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
+                    while (!position.closeTo(closestLandmark)) {
+                        bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
+                        fly(bestAngle);
+                        path.add(Point.fromLngLat(position.lng, position.lat));
+                    }
+                } else {
+                    bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(destination), destination);
                     fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
-
-                    outOfMoves = outOfMoves(landmarkPoints, buildings);
-                    if (outOfMoves){
-                        break topLoop;
-                    }
                 }
             }
-            else{
-                bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(destination), destination);
-                fly(bestAngle);
-                path.add(Point.fromLngLat(position.lng, position.lat));
-
-                outOfMoves = outOfMoves(landmarkPoints, buildings);
-                if (outOfMoves){
-                    break topLoop;
-                }
-            }
-        }
-        if (!outOfMoves) {
             this.hover();
             path.add(Point.fromLngLat(position.lng, position.lat));
-
-            outOfMoves = outOfMoves(landmarkPoints, buildings);
         }
-        return path;
     }
 
 
     /**
      *
-     * This method works the same as the algorithm method above, however the destination is hardcoded as Appleton Tower.
+     * This method works the same as the algorithm method above, however instead of passing in a list of destinations,
+     * we have one destination which is hardcoded as Appleton Tower.
      * This method is used at the end of the day when we have either run out of moves or we have completed delivering the orders.
      *
      * @param landmarkPoints List of points which contains the locations of all the landmarks, which we may divert toward
@@ -139,9 +126,8 @@ public class Drone {
      * @param buildings Buildings object which contains the required information about the NFZ's that we check for when we
      *                  move toward Appleton Tower.
      * @param path List of points which, after calling this method for our main drone, should be the final time it is updated.
-     * @return List of points which contains the drones positions move by move throughout the day.
      */
-    public List<Point> algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path){
+    public void algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path){
 
         int bestAngle;
 
@@ -161,53 +147,47 @@ public class Drone {
                 path.add(Point.fromLngLat(position.lng, position.lat));
             }
         }
-
-        return path;
     }
 
     /**
      *
-     * Method which runs the algorithmEnd on a dummy drone (which is of the same position of the main drone)
-     * and makes sure that the number of moves made by that dummy drone to get to Appleton Tower is at least 5 lower
-     * than the battery left in the main drone.
-     * We use the value 5 here as a safety net in case we need to make some unexpected adjustments to angles, causing
-     * us to make more moves than calculated.
+     * This method checks the number of moves a 'dummy' drone takes to complete an order plus the number of moves
+     * it takes to travel back to AT.
+     * It does this by normally using the algorithm and algorithmEnd methods with a dummy drone instance.
+     * We need to make sure that the number of moves made by the dummy drone is less then or equal to the battery
+     * of our main drone so that we are guaranteed that our main drone has enough battery to complete the order and
+     * return back to AT if we are finished with the day.
      *
-     *
-     * @param landmarkPoints List of points which contains the locations of all the landmarks, which is needed as a parameter
-     *                       for the algorithmEnd method.
-     * @param buildings Buildings object which contains the required information about the NFZ's that we need to pass in
-     *                  to the algorithmEnd method.
-     * @return Boolean value true if we need to stop with our deliveries because we don't have sufficient battery left,
-     *         or false if we can carry on with enough battery.
+     * @param destinations The list of shops, landmarks and pickup location we need to visit in order, to complete the order.
+     *                     This is needed to call the algorithms.
+     * @param landmarkPoints List of points which contains the locations of all the landmarks, which we may divert toward
+     *      *                       if there is no direct route to the destination. This is also needed for the algorithms.
+     * @param buildings Buildings object which contains the required information about the NFZ's that we check for when we
+     *      *                  move toward Appleton Tower. This is also needed for the algorithms.
+     * @return Boolean value true if we have enough moves to go through with the order at question, and false otherwise.
      */
-    public boolean outOfMoves(List<Point> landmarkPoints, Buildings buildings){
-
-        int SAFETY_BUFFER = 5;
-
+    public boolean sufficientNumberOfMovesForOrder(List<LongLat> destinations, List<Point> landmarkPoints, Buildings buildings){
         Drone dummyDrone = new Drone();
         dummyDrone.position = position;
-        dummyDrone.moves = 0;
-
-        List<Point> dummyList = new ArrayList<>();
-
-        dummyDrone.algorithmEnd(landmarkPoints, buildings, dummyList);
-
-        return (battery - dummyDrone.moves < SAFETY_BUFFER);
-
+        dummyDrone.algorithm(landmarkPoints, destinations, buildings, new ArrayList<>());
+        dummyDrone.algorithmEnd(landmarkPoints, buildings, new ArrayList<>());
+        return dummyDrone.moves <= battery;
     }
 
-    //Getters
+    /**
+     * Getter for drone position.
+     * @return Drone position as a LongLat object.
+     */
     public LongLat getPosition(){
         return position;
     }
 
+    /**
+     * Getter for number of moves made by drone.
+     * @return
+     */
     public int getMoves(){
         return moves;
-    }
-
-    public boolean getOutOfMoves(){
-        return outOfMoves;
     }
 
     public List<LongLat> getMovesFrom(){

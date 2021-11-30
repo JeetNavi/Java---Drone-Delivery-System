@@ -166,60 +166,37 @@ public class LongLat {
 
     /**
      *
-     * Method that gets the closest landmark (as a Longlat object) from some other location of another Longlat object
+     * Method that gets the closest landmark (as a LongLat object) from some other location of another longLat object
      * that we call destination.
      * As well as checking if the landmark is closest, we must also check that there is a direct path toward it
-     * and that there are no no-fly-zones preventing a direct route from the position of the current longlat object.
+     * such that there are no no-fly-zones preventing a direct route from the position of the current longLat object.
      *
-     * @param landmarkPoints A list of all the landmarks as Point objects - which is very similar to a longlat object.
-     * @param destination Longlat object from which we are getting the closest landmark to.
+     * @param landmarkPoints A list of all the landmarks as Point objects - which is very similar to a longLat object.
+     * @param destination longLat object from which we are getting the closest landmark to.
      * @param buildings Buildings object which contains all the information about the no-fly-zones and enables the use
      *                  of the checkDirectRoute method which checks for no-fly-zones in the direct route to landmark.
-     * @return The closest Landmark to the provided destination as a Longlat object that can be directly travelled to
-     * from the position of the current longlat object.
+     * @return The closest Landmark to the provided destination as a longLat object that can be directly travelled to
+     * from the position of the current longLat object.
      */
     public LongLat getClosestLandmarkToDestination(List<Point> landmarkPoints, LongLat destination, Buildings buildings){
         List <LongLat> landmarkLongLats = new ArrayList<>();
-        //Convert every landmark Point object to Longlat object.
 
-        int counterLMP=0;
-        if (destination == (Drone.appletonTower)){
-            for (Point p : landmarkPoints){
-                if (p.equals(Point.fromLngLat(Drone.appletonTower.lng, Drone.appletonTower.lat))){
-                    landmarkPoints.set(counterLMP, landmarkPoints.get(1));
-                    break;
-                }
-                counterLMP += 1;
-            }
-        }
-
+        //Convert every landmark Point object to LongLat object.
         for (Point p : landmarkPoints){
             landmarkLongLats.add(new LongLat(p.longitude(), p.latitude()));
         }
 
-        //Create closest Longlat object with junk value positions to start with.
+        //Create closest LongLat object with junk value positions to start with.
         LongLat closestLandmark = new LongLat(JUNK_VALUE,JUNK_VALUE);
-        LongLat closestDirectLandmark = new LongLat(JUNK_VALUE,JUNK_VALUE);
 
         for (LongLat landmark : landmarkLongLats){
-            if (destination.distanceTo(landmark) < destination.distanceTo(closestLandmark)) {
+            if (destination.distanceTo(landmark) < destination.distanceTo(closestLandmark) && buildings.checkDirectRoute(this, landmark)) {
                 closestLandmark = landmark;
-                if (buildings.checkDirectRoute(this, landmark)){
-                    closestDirectLandmark = landmark;
-                }
             }
         }
-
-        if (closestDirectLandmark.lng == JUNK_VALUE){
-            return closestLandmark;
-        }
-        return closestDirectLandmark;
-        //if(closestLandmark.lng == JUNK_VALUE){
-        //    return landmarkLongLats.get(1);
-        //}
-
-        //return closestLandmark;
+        return closestLandmark;
     }
+
 
     /**
      *
@@ -227,6 +204,8 @@ public class LongLat {
      * a NFZ.
      * This method provides a solution if such a situation was to arise, and calculates an adjusted angle that
      * will dodge the NFZ if taken.
+     * This recursively adds or subtracts 10 to the angle (we choose the one that ends up closer to the destination) until
+     * we find an angle that keeps us outside any NFZ.
      *
      * @param buildings Buildings object which contains all the information about the no-fly-zones and enables the use
      *      *           of the checkDirectRoute method which checks for no-fly-zones in the next move of the adjusted angle.
@@ -235,7 +214,7 @@ public class LongLat {
      * @param destination Longlat object of the final destination that we are aiming to go to. This is relevant here to
      *                    help decide whether we should adjust the angle up 10 or down 10 degrees. We pick the one that
      *                    gets us closer to the destination.
-     * @return
+     * @return Integer angle that is adjusted so that the next position will be outside of any NFZ.
      */
     public int angleToDodgePotentialNfz (Buildings buildings, int bestAngle , LongLat destination){
 
@@ -254,15 +233,12 @@ public class LongLat {
             } else if (buildings.checkDirectRoute(this, potentialNextAdjustedPosition2)){
                 bestAngle = potentialAdjustedAngle2;
             }else{
-
                 double distanceOne = nextPosition(potentialAdjustedAngle1).distanceTo(destination);
                 double distanceTwo = nextPosition(potentialAdjustedAngle2).distanceTo(destination);
                 if (distanceOne < distanceTwo){
                     return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle1, destination);
                 } else return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle2, destination);
-
             }
-
         }
         return bestAngle;
     }
