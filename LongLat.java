@@ -7,7 +7,6 @@ import java.util.List;
 
 public class LongLat {
 
-    public static Drone dummyDrone = new Drone();
     public static final double DEFAULT_DISTANCE = 0.00015;
 
     public static final int NORTH = 90;
@@ -182,19 +181,44 @@ public class LongLat {
     public LongLat getClosestLandmarkToDestination(List<Point> landmarkPoints, LongLat destination, Buildings buildings){
         List <LongLat> landmarkLongLats = new ArrayList<>();
         //Convert every landmark Point object to Longlat object.
+
+        int counterLMP=0;
+        if (destination == (Drone.appletonTower)){
+            for (Point p : landmarkPoints){
+                if (p.equals(Point.fromLngLat(Drone.appletonTower.lng, Drone.appletonTower.lat))){
+                    landmarkPoints.set(counterLMP, landmarkPoints.get(1));
+                    break;
+                }
+                counterLMP += 1;
+            }
+        }
+
         for (Point p : landmarkPoints){
             landmarkLongLats.add(new LongLat(p.longitude(), p.latitude()));
         }
 
         //Create closest Longlat object with junk value positions to start with.
         LongLat closestLandmark = new LongLat(JUNK_VALUE,JUNK_VALUE);
+        LongLat closestDirectLandmark = new LongLat(JUNK_VALUE,JUNK_VALUE);
 
         for (LongLat landmark : landmarkLongLats){
-            if (destination.distanceTo(landmark) < destination.distanceTo(closestLandmark) && buildings.checkDirectRoute(this, landmark)) {
+            if (destination.distanceTo(landmark) < destination.distanceTo(closestLandmark)) {
                 closestLandmark = landmark;
+                if (buildings.checkDirectRoute(this, landmark)){
+                    closestDirectLandmark = landmark;
+                }
             }
         }
-        return closestLandmark;
+
+        if (closestDirectLandmark.lng == JUNK_VALUE){
+            return closestLandmark;
+        }
+        return closestDirectLandmark;
+        //if(closestLandmark.lng == JUNK_VALUE){
+        //    return landmarkLongLats.get(1);
+        //}
+
+        //return closestLandmark;
     }
 
     /**

@@ -54,6 +54,8 @@ public class App
 
         int counter2 = 0;
 
+        Drone dummyDrone = new Drone();
+
         topLoop:
         for (String orderNo : ordersSortedByValue.keySet()){
             counter2+=1;
@@ -64,7 +66,7 @@ public class App
             Collection<String> itemNames = Orders.getItemNamesFromOrder(orderNo);
             String[] shopsToVisit = menu.shopsArrayFromItems(itemNames);
             LongLat deliverToLongLat = OrderNoToDeliverToLongLat.get(orderNo);
-            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.getPosition(), shopsToVisit, deliverToLongLat, landmarkPoints, buildings, orders, orderNo);
+            String[] tspShopsToVisit = menu.getTspShopsToVisitList(drone.getPosition(), shopsToVisit, deliverToLongLat, landmarkPoints, buildings);
             for (String shop : tspShopsToVisit){
                 LongLat destination = shopsToLongLat.get(shop);
                 path = drone.algorithm(landmarkPoints, destination, buildings, path);

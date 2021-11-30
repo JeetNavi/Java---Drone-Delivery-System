@@ -157,12 +157,10 @@ public class Menus {
      * @param deliverToLongLat Pickup Location which gets considered when calculating the cost of each route.
      * @param landmarkPoints List of landmark Point objects which is needed as a parameter to run the algorithm method.
      * @param buildings Buildings object which contains information about the NFZ's that is crucial when calculating the cost of each route.
-     * @param orders
-     * @param orderNo
      * @return
      */
         public String[] getTspShopsToVisitList (LongLat currentPosition, String[] shopsToVisit,
-                LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings, Orders orders, String orderNo){
+                LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings){
 
             //Max number of shops that can be visited per order is 2.
             if(shopsToVisit.length == MAX_SHOPS_TO_VISIT) {
