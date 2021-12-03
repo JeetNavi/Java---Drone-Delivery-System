@@ -5,25 +5,56 @@ import com.mapbox.geojson.Point;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LongLat {
+/**
+ * This class is a way of representing a position.
+ * It does this by using (longitude, latitude) coordinates.
+ */
+public final class LongLat {
 
+    /**
+     * The distance a drone moves when performing a fly move.
+     */
     public static final double DEFAULT_DISTANCE = 0.00015;
 
+    /**
+     * We follow the convention where 90 degrees is north.
+     */
     public static final int NORTH = 90;
+    /**
+     * We follow the convention where 0 degrees is east.
+     */
     public static final int EAST = 0;
+    /**
+     * We follow the convention where 270 degrees is south.
+     */
     public static final int SOUTH = 270;
+    /**
+     * We follow the convention where 180 degrees is west.
+     */
     public static final int WEST = 180;
+
+    /**
+     * We use the value -999 as a junk value that represents the angle to indicate the drone is performing a hover move.
+     */
     public static final int JUNK_VALUE = -999;
 
+    /**
+     * Longitude of the position of the drone (-3).
+     */
     public final double lng;
+    /**
+     * Latitude of the position of the drone (+55).
+     */
     public final double lat;
 
 
     /**
      * Constructor for class LongLat.
+     * A longLat object is made up of a longitude and latitude values, which are doubles.
+     * These longitude and latitude values must be specified each time a LongLat object is created.
      *
-     * @param longitude We use longitude and latitude for locations.
-     * @param latitude  We use longitude and latitude for locations.
+     * @param longitude We use longitude and latitude for locations. In our area, longitude normally starts with -3.
+     * @param latitude  We use longitude and latitude for locations. In our area, latitude normally starts with 55.
      */
     LongLat(double longitude, double latitude) {
         this.lng = longitude;
@@ -31,30 +62,30 @@ public class LongLat {
     }
 
     /**
-     * Method that calculates the distance between the current Longlat object and a given Longlat object passed in
+     * Method that calculates the distance between the current LongLat object and a given LongLat object passed in
      * as a parameter.
      * Uses the concept of the Pythagorean theorem.
      *
      * @param point instance of LongLat which is the other location we use to calculate the distance.
      * @return distance between the two points as double.
      */
-    public double distanceTo(LongLat point) {
+    public final double distanceTo(LongLat point) {
         double x = lng - point.lng;
         double y = lat - point.lat;
         return Math.sqrt((x * x) + (y * y));
     }
 
     /**
-     * Method that calculates whether the location of the current Longlat object is close to the location of a
-     * given Longlat object AKA if they are within a distance of 0.00015 from each other.
+     * Method that calculates whether the location of the current LongLat object is not close to the location of a
+     * given LongLat object AKA if they are not within a distance of 0.00015 from each other.
      * This makes use of the distanceTo method above.
      *
-     * @param point instance of LongLat which is the other location we use to see if the current location is close.
-     * @return true if the current location of the Longlat object is within a distance of 0.00015 (default distance)
-     * from the given Longlat object.
+     * @param point instance of LongLat which is the other location we use to see if the current location is not close.
+     * @return true if the current location of the LongLat object is not within a distance of 0.00015 (default distance)
+     * from the given LongLat object.
      */
-    public boolean closeTo(LongLat point) {
-        return distanceTo(point) < DEFAULT_DISTANCE;
+    public final boolean notCloseTo(LongLat point) {
+        return (distanceTo(point) > DEFAULT_DISTANCE);
     }
 
     /**
@@ -64,7 +95,7 @@ public class LongLat {
      * @param angle The angle the drone is moving towards where we follow the convention on the document.
      * @return LongLat object which is the new coordinates of the location after moving towards the given angle.
      */
-    public LongLat nextPosition(int angle) {
+    public final LongLat nextPosition(int angle) {
         //Switch statement for "regular" angles for: east, north , west and south. Also includes angle for hovering.
         switch (angle) {
             //drone is hovering i.e. no changes to latitude/longitude.
@@ -87,10 +118,9 @@ public class LongLat {
         double v = Math.sin(Math.toRadians(angle % 90)) * DEFAULT_DISTANCE;
 
         //angles between 0 and 90 would be increasing longitude and increasing latitude.
+        final double latDist2 = Math.sqrt((DEFAULT_DISTANCE * DEFAULT_DISTANCE) - (v * v));
         if (angle < 90) {
-            double latDist = v;
-            double longDist = Math.sqrt((DEFAULT_DISTANCE * DEFAULT_DISTANCE) - (latDist * latDist));
-            return new LongLat(this.lng + longDist, this.lat + latDist);
+            return new LongLat(this.lng + latDist2, this.lat + v);
         }
 
         //angles between 90 and 180 would be increasing latitude and decreasing longitude.
@@ -102,9 +132,7 @@ public class LongLat {
 
         //angles between 180 and 270 would be decreasing longitude and decreasing latitude.
         else if (angle < 270) {
-            double latDist = v;
-            double longDist = Math.sqrt((DEFAULT_DISTANCE * DEFAULT_DISTANCE) - (latDist * latDist));
-            return new LongLat(this.lng - longDist, this.lat - latDist);
+            return new LongLat(this.lng - latDist2, this.lat - v);
         }
 
         //angles between 270 and 360 would be decreasing latitude and increasing longitude.
@@ -118,13 +146,13 @@ public class LongLat {
     /**
      *
      * Method that calculates the best angle (rounded to the nearest 10) to take to travel from the current
-     * Longlat object to the given Longlat object passed in.
+     * LongLat object to the given LongLat object passed in.
      * Uses mathematical formula Tan x = Opposite / Adjacent in calculating best angle.
      *
-     * @param destination Longlat object in which we calculate the best angle to travel toward it.
+     * @param destination LongLat object in which we calculate the best angle to travel toward it.
      * @return Integer value of the best angle to take to travel to destination.
      */
-    public int bestAngle(LongLat destination){
+    public final int bestAngle(LongLat destination){
 
         int bestAngle = 0;
 
@@ -178,7 +206,7 @@ public class LongLat {
      * @return The closest Landmark to the provided destination as a longLat object that can be directly travelled to
      * from the position of the current longLat object.
      */
-    public LongLat getClosestLandmarkToDestination(List<Point> landmarkPoints, LongLat destination, Buildings buildings){
+    public final LongLat getClosestLandmarkToDestination(List<Point> landmarkPoints, LongLat destination, Buildings buildings){
         List <LongLat> landmarkLongLats = new ArrayList<>();
 
         //Convert every landmark Point object to LongLat object.
@@ -204,19 +232,20 @@ public class LongLat {
      * a NFZ.
      * This method provides a solution if such a situation was to arise, and calculates an adjusted angle that
      * will dodge the NFZ if taken.
-     * This recursively adds or subtracts 10 to the angle (we choose the one that ends up closer to the destination) until
-     * we find an angle that keeps us outside any NFZ.
+     * This recursively adds or subtracts 10 to the angle (we choose the one that keeps us outside the NFZ, if they both
+     * keep us outside, we choose the one that is closer to the destination) until we find an angle that keeps us
+     * outside any NFZ.
      *
      * @param buildings Buildings object which contains all the information about the no-fly-zones and enables the use
-     *      *           of the checkDirectRoute method which checks for no-fly-zones in the next move of the adjusted angle.
+     *                of the checkDirectRoute method which checks for no-fly-zones in the next move of the adjusted angle.
      * @param bestAngle The integer value of the first best angle calculated where rounding it to the nearest 10 could've
      *                  caused the unexpected visit to NFZ.
-     * @param destination Longlat object of the final destination that we are aiming to go to. This is relevant here to
+     * @param destination LongLat object of the final destination that we are aiming to go to. This is relevant here to
      *                    help decide whether we should adjust the angle up 10 or down 10 degrees. We pick the one that
      *                    gets us closer to the destination.
      * @return Integer angle that is adjusted so that the next position will be outside of any NFZ.
      */
-    public int angleToDodgePotentialNfz (Buildings buildings, int bestAngle , LongLat destination){
+    public final int angleToDodgePotentialNfz (Buildings buildings, int bestAngle , LongLat destination){
 
         //Angle rounding to 10 causing unexpected journey through nfz so we check for + and - 10
         int potentialAdjustedAngle1 = (bestAngle + 10) % 360;
@@ -226,20 +255,32 @@ public class LongLat {
         LongLat potentialNextAdjustedPosition1 = (nextPosition(potentialAdjustedAngle1));
         LongLat potentialNextAdjustedPosition2 = (nextPosition(potentialAdjustedAngle2));
 
-        if (!buildings.checkDirectRoute(this, potentialNextPosition)) {
+        double distanceOne = nextPosition(potentialAdjustedAngle1).distanceTo(destination);
+        double distanceTwo = nextPosition(potentialAdjustedAngle2).distanceTo(destination);
 
-            if (buildings.checkDirectRoute(this, potentialNextAdjustedPosition1)) {
-                bestAngle = potentialAdjustedAngle1;
-            } else if (buildings.checkDirectRoute(this, potentialNextAdjustedPosition2)){
-                bestAngle = potentialAdjustedAngle2;
-            }else{
-                double distanceOne = nextPosition(potentialAdjustedAngle1).distanceTo(destination);
-                double distanceTwo = nextPosition(potentialAdjustedAngle2).distanceTo(destination);
+        boolean potentialAdjustedAngle1Valid = buildings.checkDirectRoute(this, potentialNextAdjustedPosition1);
+        boolean potentialAdjustedAngle2Valid = buildings.checkDirectRoute(this, potentialNextAdjustedPosition2);
+
+        if (!buildings.checkDirectRoute(this, potentialNextPosition)){
+            if (potentialAdjustedAngle1Valid && potentialAdjustedAngle2Valid){
+
+                //Both adjusted angles do not intersect with NFZ.
                 if (distanceOne < distanceTwo){
-                    return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle1, destination);
-                } else return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle2, destination);
-            }
-        }
-        return bestAngle;
+                    return potentialAdjustedAngle1;
+                } else return potentialAdjustedAngle2;
+
+            //Only one adjusted angle keeps out of NFZ.
+            } else if (potentialAdjustedAngle1Valid){
+                return potentialAdjustedAngle1;
+            } else if (potentialAdjustedAngle2Valid){
+                return potentialAdjustedAngle2;
+
+            //Both adjusted angles intersects with NFZ.
+            } else if (distanceOne < distanceTwo){
+                return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle1, destination);
+            } else return angleToDodgePotentialNfz(buildings, potentialAdjustedAngle2, destination);
+        } else return bestAngle;
+
     }
 }
+

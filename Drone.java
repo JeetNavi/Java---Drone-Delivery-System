@@ -5,17 +5,45 @@ import com.mapbox.geojson.Point;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Drone {
+/**
+ * This class represents a drone that makes deliveries throughout the day.
+ * The drone has 3 main attributes that we are mainly interested in: position, battery and moves.
+ * We also have other attributes that will hold important information to write to the flightpath table.
+ */
+public final class Drone {
 
-
+    /**
+     *LongLat object for location of Appleton Tower.
+     */
     public static final LongLat appletonTower = new LongLat(-3.186874, 55.944494);
 
+    /**
+     * Our main drone will start from Appleton Tower each day.
+     */
     private LongLat position = appletonTower;
+    /**
+     * Our main drone will start with 1500 battery.
+     */
     private int battery = 1500;
+    /**
+     * Our main drone will start with 0 moves made.
+     */
     private int moves = 0;
 
+    /**
+     * List of LongLats that holds the list of positions a drone has moved from throughout completing an order.
+     * This lists content is required to write to the flightpath table, precisely, the fromLongitude and fromLatitude column.
+     */
     private List<LongLat> movesFrom = new ArrayList<>();
+    /**
+     * List of LongLats that holds the list of positions a drone has moved to throughout completing an order.
+     * This lists content is required to write to the flightpath table, precisely, the toLongitude and toLatitude column.
+     */
     private List<LongLat> movesTo = new ArrayList<>();
+    /**
+     * List of angles the drone has moved toward throughout completing an order.
+     * This lists content is required to write to the flightpath table, precisely, the angle column.
+     */
     private List<Integer> anglesOfMoves = new ArrayList<>();
 
 
@@ -68,11 +96,12 @@ public class Drone {
      * This method is called if we want our drone to travel to a list of locations in order, passed in as a list of
      * LongLats called destinations.
      * For each destination (location) in the destinations list:
-     * We first check if there is a direct route to the destination without any NFZ's blocking the path.
-     * If there is, then we simply take this route, while checking for unexpected NFZ's because of rounding the angle.
-     * If there is not, then we direct the drone towards the landmark which is closest to the destination, then after
-     * that, it is sent toward the destination as before, if there is a direct route (which there should be).
-     * We repeat this until we are close to the destination.
+     * &#064;RP: We check if there is a direct route to the destination without any NFZ's blocking the path.
+     * If there is not, then we direct the drone towards the landmark which is closest to the destination, while checking for
+     * unexpected visits to NFZ's because of the rounding angle problem. Once we have reached this landmark, we repeat
+     * from &#064;RP until there is a direct route.
+     * We then direct the drone towards the destination while checking for unexpected visits to NFZ's because of the
+     * rounding angle problem, until we have reached the destination.
      * After every move (fly or hover), we add the new position to a list of points, which will be used for the GeoJson file
      * that we create.
      *
@@ -87,28 +116,28 @@ public class Drone {
      *
      *
      */
-    public void algorithm (List<Point> landmarkPoints, List<LongLat> destinations, Buildings buildings, List<Point> path){
+    public final void algorithm (List<Point> landmarkPoints, List<LongLat> destinations, Buildings buildings, List<Point> path){
 
         int bestAngle;
 
         for (LongLat destination : destinations) {
 
-            while (!position.closeTo(destination)) {
-
-
-                if (!buildings.checkDirectRoute(position, destination)) {
-                    LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
-                    while (!position.closeTo(closestLandmark)) {
-                        bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
-                        fly(bestAngle);
-                        path.add(Point.fromLngLat(position.lng, position.lat));
-                    }
-                } else {
-                    bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(destination), destination);
+            while (!buildings.checkDirectRoute(position, destination)) {
+                LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, destination, buildings);
+                while (position.notCloseTo(closestLandmark)) {
+                    bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
                     fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
                 }
             }
+
+            while (position.notCloseTo(destination)){
+                bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(destination), destination);
+                fly(bestAngle);
+                path.add(Point.fromLngLat(position.lng, position.lat));
+            }
+
+
             this.hover();
             path.add(Point.fromLngLat(position.lng, position.lat));
         }
@@ -127,15 +156,15 @@ public class Drone {
      *                  move toward Appleton Tower.
      * @param path List of points which, after calling this method for our main drone, should be the final time it is updated.
      */
-    public void algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path){
+    public final void algorithmEnd (List<Point> landmarkPoints, Buildings buildings, List<Point> path){
 
         int bestAngle;
 
-        while (!position.closeTo(appletonTower)){
+        while (position.notCloseTo(appletonTower)){
 
             if (!buildings.checkDirectRoute(position, appletonTower)) {
                 LongLat closestLandmark = position.getClosestLandmarkToDestination(landmarkPoints, appletonTower, buildings);
-                while (!position.closeTo(closestLandmark)){
+                while (position.notCloseTo(closestLandmark)){
                     bestAngle = position.angleToDodgePotentialNfz(buildings, position.bestAngle(closestLandmark), closestLandmark);
                     fly(bestAngle);
                     path.add(Point.fromLngLat(position.lng, position.lat));
@@ -166,7 +195,7 @@ public class Drone {
      *      *                  move toward Appleton Tower. This is also needed for the algorithms.
      * @return Boolean value true if we have enough moves to go through with the order at question, and false otherwise.
      */
-    public boolean sufficientNumberOfMovesForOrder(List<LongLat> destinations, List<Point> landmarkPoints, Buildings buildings){
+    public final boolean sufficientNumberOfMovesForOrder(List<LongLat> destinations, List<Point> landmarkPoints, Buildings buildings){
         Drone dummyDrone = new Drone();
         dummyDrone.position = position;
         dummyDrone.algorithm(landmarkPoints, destinations, buildings, new ArrayList<>());
@@ -178,44 +207,72 @@ public class Drone {
      * Getter for drone position.
      * @return Drone position as a LongLat object.
      */
-    public LongLat getPosition(){
+    public final LongLat getPosition(){
         return position;
     }
 
     /**
      * Getter for number of moves made by drone.
-     * @return
+     * @return Number of moves the drone has made.
      */
-    public int getMoves(){
+    public final int getMoves(){
         return moves;
     }
 
-    public List<LongLat> getMovesFrom(){
+    /**
+     * Getter for the positions the drone has moved from.
+     * @return List of LongLat objects representing the positions the drone has moved from.
+     */
+    public final List<LongLat> getMovesFrom(){
         return movesFrom;
     }
 
-    public List<LongLat> getMovesTo(){
+    /**
+     * Getter for the positions the drone has moved to.
+     * @return List of LongLat objects representing the positions the drone has moved to.
+     */
+    public final List<LongLat> getMovesTo(){
         return movesTo;
     }
 
-    public List<Integer> getAnglesOfMoves(){
+    /**
+     * Getter for the angles the drone has taken throughout its moves.
+     * @return List of integers that is the angles the drone has taken in each move.
+     */
+    public final List<Integer> getAnglesOfMoves(){
         return anglesOfMoves;
     }
 
-    //Setters
-    public void setPosition(LongLat newPosition){
+    /**
+     * Setter for the drones position.
+     * @param newPosition The new position that the drone should be at.
+     */
+    public final void setPosition(LongLat newPosition){
         this.position = newPosition;
     }
 
-    public void setMovesFrom(List<LongLat> newMovesFrom){
+    /**
+     * Setter for the drones movesFrom list.
+     * @param newMovesFrom Updated list of positions that the drone has moved from (for an order, so will be empty
+     *                     at the start of each order).
+     */
+    public final void setMovesFrom(List<LongLat> newMovesFrom){
         this.movesFrom = newMovesFrom;
     }
-
-    public void setMovesTo(List<LongLat> newMovesTo){
+    /**
+     * Setter for the drones movesTo list.
+     * @param newMovesTo Updated list of positions that the drone has moved to (for an order, so will be empty
+     *                     at the start of each order).
+     */
+    public final void setMovesTo(List<LongLat> newMovesTo){
         this.movesTo = newMovesTo;
     }
 
-    public void setAnglesOfMoves(List<Integer> newAnglesOfMoves){
+    /**
+     * Setter for the drones angleOfMoves list.
+     * @param newAnglesOfMoves Updated list of angles the drone has taken when moving.
+     */
+    public final void setAnglesOfMoves(List<Integer> newAnglesOfMoves){
         this.anglesOfMoves = newAnglesOfMoves;
     }
 
