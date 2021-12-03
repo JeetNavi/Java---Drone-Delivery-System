@@ -8,21 +8,71 @@ import java.sql.Date;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Orders {
+/**
+ * This class represents every order that is placed on a given date.
+ * Once an orders object is created, it has lots of information we need about every order from a given date,
+ * such as its order number and its pick up location (delivery location).
+ * This means we only need to create one orders object since the orders made will not change on the given day.
+ * All the information relevant to this class is on the database.
+ *
+ */
+public final class Orders {
 
+    /**
+     * Database port number is needed to access the database that has information on every order placed on any date.
+     */
     public final String dbPort;
+    /**
+     * We use the date variable so that we can retrieve orders from that date from the database (all at once). This
+     * reduces the amount of data we pull from the database, making it so we only pull the required data. We achieve this
+     * by using this data value in the SQL query when retrieving data.
+     */
     public final Date fullDate;
 
-    public static final List<String> orderNoList = new ArrayList<String>();
-    public static final List<String> customerList = new ArrayList<>();
+    /**
+     * List of the orders' order number of the date given.
+     * These will be eight-character hexadecimal strings giving the unique order number of an order.
+     */
+    public static final List<String> orderNoList = new ArrayList<>();
+    /**
+     * List of the orders' pick up location.
+     * These will be a variable-length string of at most 18 characters giving the WhatThreeWords address of
+     * the delivery location.
+     */
     public static final List<String> deliverToList = new ArrayList<>();
+    /**
+     * This hash map maps the eight-character hexadecimal string giving the unique order number of an order to the items
+     * that were requested from shops in the order.
+     * Since we can have one order to many items, we use a multi-valued hash map to achieve this affect.
+     */
     public static final MultiValuedMap<String, String> orderItemMap = new ArrayListValuedHashMap<>();
+    /**
+     * This hash map maps the eight-character hexadecimal string giving the unique order number of an order to the
+     * variable-length string of at most 18 characters giving the WhatThreeWords address of the delivery location.
+     */
     public static final Map<String, String> orderNoDeliverToMap = new HashMap<>();
 
+    /**
+     * To limit the number of prepared statements we make, we declare them here, outside of any method that may be called more than once.
+     */
     private static PreparedStatement psFlightpath;
     private static PreparedStatement psDeliveries;
 
 
+    /**
+     * Constructor for class Orders.
+     * We must specify the port the database is running on and the date we are interested in when creating an Orders object.
+     *
+     * We connect to the database server and we retrieve the information we need from the two tables.
+     * From one table we get the order number and where to deliver it to, and for each of these orders, we get the items
+     * that was requested.
+     *
+     * We also drop the flightpath and deliveries table if they exist and create them.
+     * We initialise our prepare statements so that we are ready to insert into any of the two tables with the methods.
+     *
+     * @param dbPort the port the web server is running on.
+     * @param fullDate the date that the orders must be placed on.
+     */
     Orders(String dbPort, Date fullDate){
 
         this.dbPort = dbPort;
@@ -42,7 +92,6 @@ public class Orders {
             while (rs.next()){
                 String orderNo = rs.getString(1);
                 orderNoList.add(orderNo);
-                customerList.add(rs.getString(3));
                 deliverToList.add(rs.getString(4));
                 orderNoDeliverToMap.put(orderNo, rs.getString(4));
 
@@ -118,7 +167,7 @@ public class Orders {
      * @param orderNo String orderNo of the order from which we want to get the items from.
      * @return Collection of strings which is the names of the items from the order.
      */
-    public static Collection<String> getItemNamesFromOrder(String orderNo){
+    public final Collection<String> getItemNamesFromOrder(String orderNo){
         return (orderItemMap.get(orderNo));
     }
 
@@ -131,7 +180,7 @@ public class Orders {
      * @param webPort webPort of web server is needed to convert from w3w into longlat.
      * @return Hashmap mapping orderNo to pick up location as LongLat.
      */
-    public static Map<String, LongLat> getOrderNoToDeliverToLongLat(String webPort){
+    public final Map<String, LongLat> getOrderNoToDeliverToLongLat(String webPort){
 
         Map<String, LongLat> orderNoToDeliverToLongLat = new HashMap<>();
 
@@ -152,7 +201,7 @@ public class Orders {
      * @param menus Menus object is needed so that we can use the getDeliveryCost method for orders.
      * @return sorted Hashmap that maps order numbers to its value in decreasing order of value.
      */
-    public static Map<String, Integer> getOrderedValuableOrdersToCostMap (Menus menus){
+    public final Map<String, Integer> getOrderedValuableOrdersToCostMap (Menus menus){
 
         Map<String, Integer> orderedValuableOrdersToCostMap = new HashMap<>();
 
@@ -179,7 +228,7 @@ public class Orders {
      * @param orderNo  the eight-character hexadecimal string assigned to this order in the orders table.
      * @param costInPence the total cost of the order, including the standard 50p delivery charge.
      */
-    public static void insertIntoDeliveries (String orderNo, int costInPence){
+    public final void insertIntoDeliveries (String orderNo, int costInPence){
 
         try{
             psDeliveries.setString(1, orderNo);
@@ -205,7 +254,7 @@ public class Orders {
      * @param toLongitude the longitude of the drone at the end of this move.
      * @param toLatitude the latitude of the drone at the end of this move.
      */
-    public static void insertIntoFlightpath (String orderNo, double fromLongitude, double fromLatitude, int angle, double toLongitude, double toLatitude){
+    public final void insertIntoFlightpath (String orderNo, double fromLongitude, double fromLatitude, int angle, double toLongitude, double toLatitude){
 
         try{
             psFlightpath.setString(1, orderNo);

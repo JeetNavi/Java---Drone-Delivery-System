@@ -11,23 +11,55 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
 
-public class Menus {
+/**
+ * This class represents the menus of every shop, as one big menu.
+ * Once a menus object is created, we will have all the relevant information about every shop.
+ * Since the information about the menus of shops will not change during execution, we only need to create one menus
+ * object throughout delivering orders for the day.
+ */
+public final class Menus {
 
-    //Delivery cost of 50 pence applies to all orders.
+    /**
+     *Delivery cost of 50p applies to all orders.
+     */
     public static final int DELIVERY_COST = 50;
+    /**
+     * The general successful response code when working with web servers.
+     * Initialised here so that every class can use it.
+     */
     public static final int SUCCESSFUL_RESPONSE_CODE = 200;
-    public static final int MAX_SHOPS_TO_VISIT = 2;
 
-    //Only 1 client is created for all requests across every class.
+    /**
+     * Http Client needed to access the web server.
+     * Initialised here so that only 1 client is created for all requests across every class.
+     */
     public static final HttpClient client = HttpClient.newHttpClient();
-    public static final Map<String, Integer> prices = new HashMap<String, Integer>();
+    /**
+     * Hash Map that maps the name of an item to its price in pence.
+     */
+    public static final Map<String, Integer> itemToPrice = new HashMap<>();
+    /**
+     * Hash map that maps the name of an item to the name of the shop that it is being sold in.
+     */
     public static final Map<String, String> itemToShop = new HashMap<>();
+    /**
+     * Hash map that maps the name of a shop to its W3W address which is a variable-length string of at most 18 characters.
+     */
     public static final Map<String, String[]> shopToWords = new HashMap<>();
 
+    /**
+     * Web port is needed to retrieve the information from the web server.
+     */
     public final String webPort;
 
     /**
      * Constructor for class Menus.
+     * We first get all the information we need from the web server.
+     * This includes each shops name, W3W address and menu, which consists of item names and prices.
+     * We then make useful hash maps called shopToWords, itemToPrice, itemToShop.
+     * shopToWords maps the names of each shop to its W3W String address.
+     * itemToPrice maps each item name to its price in pence.
+     * itemToShop maps each item to the name of the shop it belongs to.
      *
      * @param webPort     The port where the web server is running.
      */
@@ -70,7 +102,7 @@ public class Menus {
             for (ShopDetails shop : shopDetailsList) {
                 shopToWords.put(shop.name, shop.location.split("\\."));
                 for (ItemDetails itemDetail : shop.menu) {
-                    prices.put(itemDetail.item, itemDetail.pence);
+                    itemToPrice.put(itemDetail.item, itemDetail.pence);
                     itemToShop.put(itemDetail.item, shop.name);
                 }
             }
@@ -89,12 +121,12 @@ public class Menus {
      * @param items Collection of Strings which are the names of the items that we would like the prices for.
      * @return Integer value of the total price of all items in pence, including the 50 pence delivery charge.
      */
-    public int getDeliveryCost(Collection<String> items) {
+    public final int getDeliveryCost(Collection<String> items) {
 
         int price = DELIVERY_COST;
 
         for (String item : items) {
-            price += prices.get(item);
+            price += itemToPrice.get(item);
         }
 
         return price;
@@ -109,7 +141,7 @@ public class Menus {
      * @param items Collection of Strings which are the names of items sold at shops.
      * @return String array of shop names that are home to the items in the collection.
      */
-    public String[] shopsArrayFromItems(Collection<String> items) {
+    public final String[] shopsArrayFromItems(Collection<String> items) {
 
         Set<String> shops = new HashSet<>();
 
@@ -129,7 +161,7 @@ public class Menus {
      *
      * @return HashMap that maps shop names to their locations as LongLats.
      */
-    public Map<String, LongLat> getShopsToLongLat (){
+    private Map<String, LongLat> getShopsToLongLat (){
 
         Map<String, LongLat> shopsToLongLat = new HashMap<>();
 
@@ -145,8 +177,8 @@ public class Menus {
      * Method that sorts an array of shops to visit for a given order (orderNo) such that travelling to the shops
      * in order of how they appear in the array is the best (minimal moves) route.
      * Since an order can only have items from at most 2 shops, there is only two combinations of routes to test:
-     * Route 1: Current Position -> Shop 1 -> Shop 2 -> Pickup Location,
-     * Route 2: Current Position -> Shop 2 -> Shop 1 -> Pickup location.
+     * Route 1: Current Position -&gt; Shop 1 -&gt; Shop 2 -&gt; Pickup Location,
+     * Route 2: Current Position -&gt; Shop 2 -&gt; Shop 1 -&gt; Pickup location.
      * Note: if an order only has items from one shop, it does not enter the first if statement and returns the shopsToVisit
      * array directly without any sorting (since it is of 1 element).
      * This is a brute force approach to a TSP problem.
@@ -157,43 +189,45 @@ public class Menus {
      * @param deliverToLongLat Pickup Location which gets considered when calculating the cost of each route.
      * @param landmarkPoints List of landmark Point objects which is needed as a parameter to run the algorithm method.
      * @param buildings Buildings object which contains information about the NFZ's that is crucial when calculating the cost of each route.
-     * @return
+     * @return List of LongLat objects which contains the destination we must visit for an order. This list is ordered so that if our
+     * drone visits each destination in the order as it appears in the list, it will be taking the most efficient route (minimising moves).
      */
-    public List<LongLat> getTspShopsToVisitLongLatList (LongLat currentPosition, String[] shopsToVisit,
+    public final List<LongLat> getTspShopsToVisitLongLatList (LongLat currentPosition, String[] shopsToVisit,
                                                         LongLat deliverToLongLat, List<Point> landmarkPoints, Buildings buildings){
 
         Map<String, LongLat> shopsToLonglat = getShopsToLongLat();
 
         //Max number of shops that can be visited per order is 2.
+        int MAX_SHOPS_TO_VISIT = 2;
         if(shopsToVisit.length == MAX_SHOPS_TO_VISIT) {
 
 
+            //Creating 2 dummy drones and setting their positions to the current position of the main drone.
             Drone testDrone1 = new Drone();
             testDrone1.setPosition(currentPosition);
-
             Drone testDrone2 = new Drone();
             testDrone2.setPosition(currentPosition);
 
+            //Creating a 2nd shopsToVisit array which is just the normal shopsToVisit array reversed.
             String[] shopsToVisit2 = {shopsToVisit[1], shopsToVisit[0]};
 
             List<LongLat> shopsToVisitLongLats = new ArrayList<>();
             List<LongLat> shopsToVisitLongLats2 = new ArrayList<>();
 
+            //Converting all shops W3W address to LongLat and storing them in a list. We also add the pick up location.
             for (String shop : shopsToVisit){
                 shopsToVisitLongLats.add(shopsToLonglat.get(shop));
-                //testDrone1.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
             }
             shopsToVisitLongLats.add(deliverToLongLat);
 
-
+            //Running the algorithm with the test drone to see how many moves the route takes.
             testDrone1.algorithm(landmarkPoints, shopsToVisitLongLats, buildings, new ArrayList<>());
-            //testDrone1.algorithm(landmarkPoints, deliverToLongLat, buildings, new ArrayList<>());
 
             for (String shop: shopsToVisit2){
                 shopsToVisitLongLats2.add(shopsToLonglat.get(shop));
-                //testDrone2.algorithm(landmarkPoints, destination, buildings, new ArrayList<>());
             }
             shopsToVisitLongLats2.add(deliverToLongLat);
+
             testDrone2.algorithm(landmarkPoints, shopsToVisitLongLats2, buildings, new ArrayList<>());
 
             if (testDrone1.getMoves() < testDrone2.getMoves()){
@@ -203,9 +237,11 @@ public class Menus {
             return shopsToVisitLongLats2;
 
         }
+        //The case where we only have 1 shop to visit, so we return it as a LongLat object in a list with its delivery location.
         else{
             List<LongLat> shopToVisitLongLats = new ArrayList<>();
             shopToVisitLongLats.add(shopsToLonglat.get(shopsToVisit[0]));
+            shopToVisitLongLats.add(deliverToLongLat);
             return shopToVisitLongLats;
         }
 
